@@ -1,0 +1,8 @@
+{
+    "KPlugin": {
+        "Description": "kdevelop-workshop",
+        "Name": "kdevelop-workshop"
+    },
+    "X-KDevelop-Category": "Global",
+    "X-KDevelop-Mode": "GUI"
+}
