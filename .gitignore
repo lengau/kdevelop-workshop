@@ -1,3 +1,10 @@
 build/
 install/
 .kdev4/
+obj-*/
+debian/.debhelper/
+debian/kdevelop-workshop/
+debian/*.substvars
+debian/*.debhelper
+debian/debhelper-build-stamp
+debian/files

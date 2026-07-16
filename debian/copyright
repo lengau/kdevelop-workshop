@@ -1,0 +1,14 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: kdevelop-workshop
+Source: https://github.com/lengau/kdevelop-workshop
+
+Files: *
+Copyright: 2026 Alex M. Lowe <alex@lowe.dev>
+License: GPL-3.0
+ This program is free software; you can redistribute it and/or
+ modify it under the terms of the GNU General Public License as
+ published by the Free Software Foundation; version 3 of
+ the License.
+ .
+ On Debian systems, the complete text of the GNU General Public
+ License version 3 can be found in "/usr/share/common-licenses/GPL-3".

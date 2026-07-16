@@ -1,0 +1,73 @@
+name: Debian Package Build & Install Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-install:
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [ubuntu-26.04, ubuntu-26.04-arm]
+    container:
+      image: ubuntu:26.10
+      options: --user root
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Disable apt docker-clean
+        run: rm -f /etc/apt/apt.conf.d/docker-clean
+
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            /var/cache/apt/archives
+            /var/lib/apt/lists
+          key: ${{ matrix.runs-on }}-apt-${{ hashFiles('debian/control') }}
+          restore-keys: |
+            ${{ matrix.runs-on }}-apt-
+
+      - name: Install packaging tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            dpkg-dev \
+            debhelper \
+            devscripts \
+            equivs \
+            ca-certificates
+
+      - name: Install build dependencies
+        run: |
+          mk-build-deps -i -r -t "apt-get -y --no-install-recommends" debian/control
+
+      - name: Build Debian package
+        run: |
+          dpkg-buildpackage -us -uc -b
+
+      - name: Test installation
+        run: |
+          apt-get install -y --no-install-recommends ../kdevelop-workshop_*.deb
+
+      - name: Link packages for upload
+        run: |
+          mkdir -p dist
+          ln ../kdevelop-workshop_*.deb dist/
+
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: kdevelop-workshop-deb-${{ matrix.runs-on }}
+          path: dist/kdevelop-workshop_*.deb
+
