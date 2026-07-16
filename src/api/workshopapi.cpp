@@ -1,11 +1,14 @@
 #include "workshopapi.h"
 #include "debug.h"
 #include "workshopsettings.h"
+
 #include <QEventLoop>
 #include <QNetworkAccessManager>
-#include <QNetworkReply>
+#include <QNetworkRequestFactory>
+#include <QRestAccessManager>
+#include <QRestReply>
+#include <optional>
 #include <QNetworkRequest>
-#include <QUrl>
 
 namespace WorkshopApi {
 
@@ -16,39 +19,49 @@ QJsonDocument query(const QString& path, const QByteArray& postData, const QStri
         socketPath = WorkshopSettings::defaultSocketPathValue();
 
     QNetworkAccessManager nam;
-    QNetworkRequest request(QUrl(QStringLiteral("unix+http://localhost") + path));
-    request.setAttribute(QNetworkRequest::FullLocalServerNameAttribute, socketPath);
+    QRestAccessManager rest(&nam);
+    QNetworkRequestFactory requestFactory(QUrl(QStringLiteral("unix+http://localhost")));
+    requestFactory.setAttribute(QNetworkRequest::FullLocalServerNameAttribute, socketPath);
+    QNetworkRequest request = requestFactory.createRequest(path);
     if (!postData.isEmpty())
         request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
 
-    QNetworkReply* reply = nullptr;
+    QEventLoop loop;
+    std::optional<QJsonDocument> responseDoc;
+    auto replyHandler = [&loop, &responseDoc, &method, &path](QRestReply& reply) {
+        if (!reply.isSuccess()) {
+            qCWarning(PLUGIN_KDEVELOP_WORKSHOP) << "Request failed for" << method << path << ":" << reply.errorString();
+            loop.quit();
+            return;
+        }
+
+        responseDoc = reply.readJson();
+        if (!responseDoc.has_value()) {
+            qCWarning(PLUGIN_KDEVELOP_WORKSHOP) << "Failed to parse JSON body for" << method << path;
+        }
+
+        loop.quit();
+    };
+
     if (method == QStringLiteral("POST")) {
-        reply = nam.post(request, postData);
+        rest.post(request, postData, &loop, replyHandler);
     } else if (method == QStringLiteral("GET")) {
-        reply = nam.get(request);
+        if (postData.isEmpty()) {
+            rest.get(request, &loop, replyHandler);
+        } else {
+            rest.get(request, postData, &loop, replyHandler);
+        }
     } else {
-        reply = nam.sendCustomRequest(request, method.toUtf8(), postData);
+        rest.sendCustomRequest(request, method.toUtf8(), postData, &loop, replyHandler);
     }
 
-    QEventLoop loop;
-    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
     loop.exec();
 
-    if (reply->error() != QNetworkReply::NoError) {
-        qCWarning(PLUGIN_KDEVELOP_WORKSHOP) << "Request failed for" << method << path << ":" << reply->errorString();
-        reply->deleteLater();
+    if (!responseDoc.has_value()) {
         return {};
     }
 
-    const QByteArray body = reply->readAll();
-    reply->deleteLater();
-
-    auto result = QJsonDocument::fromJson(body);
-    if (result.isNull()) {
-        qCWarning(PLUGIN_KDEVELOP_WORKSHOP)
-            << "Failed to parse JSON body for" << method << path << "- body prefix:" << body.left(120);
-    }
-    return result;
+    return *responseDoc;
 }
 
 }
