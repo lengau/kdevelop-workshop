@@ -2,9 +2,10 @@ name: Debian Package Build & Install Test
 
 on:
   push:
-    branches: [ main, debian-packaging ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, debian-packaging ]
+    branches: [ main ]
+
 
 jobs:
   build-and-install:
