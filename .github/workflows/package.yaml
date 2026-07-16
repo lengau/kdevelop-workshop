@@ -60,8 +60,14 @@ jobs:
         run: |
           apt-get install -y --no-install-recommends ../kdevelop-workshop_*.deb
 
+      - name: Copy packages for upload
+        run: |
+          mkdir -p dist
+          cp ../kdevelop-workshop_*.deb dist/
+
       - name: Upload Debian package
         uses: actions/upload-artifact@v4
         with:
           name: kdevelop-workshop-deb-${{ matrix.runs-on }}
-          path: ../kdevelop-workshop_*.deb
+          path: dist/kdevelop-workshop_*.deb
+
