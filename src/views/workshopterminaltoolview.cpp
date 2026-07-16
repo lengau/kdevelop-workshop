@@ -402,6 +402,11 @@ void WorkshopTerminalToolView::startWorkshop()
 
     WorkshopApi::queryAsync(
         QStringLiteral("/v1/projects"), this, [this, projectPath, workshopName, action](const QJsonDocument& doc) {
+            if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())
+                || m_workshopCombo->currentText() != workshopName) {
+                return;
+            }
+
             QString projectId;
             if (!doc.isEmpty()) {
                 QJsonArray projects = doc.object().value(QStringLiteral("result")).toArray();
@@ -430,7 +435,12 @@ void WorkshopTerminalToolView::startWorkshop()
             WorkshopApi::queryAsync(
                 QStringLiteral("/v1/projects/%1/workshops").arg(projectId),
                 QJsonDocument(req).toJson(QJsonDocument::Compact), QStringLiteral("POST"), this,
-                [this, workshopName](const QJsonDocument& resp) {
+                [this, projectPath, workshopName](const QJsonDocument& resp) {
+                    if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())
+                        || m_workshopCombo->currentText() != workshopName) {
+                        return;
+                    }
+
                     bool success = false;
                     QString errorMessage;
                     QString changeId;
@@ -469,7 +479,13 @@ void WorkshopTerminalToolView::startWorkshop()
 
                     WorkshopApi::queryAsync(
                         QStringLiteral("/v1/changes/%1/wait").arg(changeId), this,
-                        [this, workshopName](const QJsonDocument& waitResp) {
+                        [this, projectPath, workshopName](const QJsonDocument& waitResp) {
+                            if (!ProjectSelectionGuard::selectionMatches(projectPath,
+                                                                         m_projectCombo->currentData().toString())
+                                || m_workshopCombo->currentText() != workshopName) {
+                                return;
+                            }
+
                             bool waitSuccess = true;
                             QString errorMessage;
                             if (!waitResp.isEmpty()) {

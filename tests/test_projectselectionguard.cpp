@@ -32,5 +32,5 @@ void TestProjectSelectionGuard::selectionMatches()
     QCOMPARE(ProjectSelectionGuard::selectionMatches(expected, current), matches);
 }
 
-QTEST_MAIN(TestProjectSelectionGuard)
+QTEST_APPLESS_MAIN(TestProjectSelectionGuard)
 #include "test_projectselectionguard.moc"

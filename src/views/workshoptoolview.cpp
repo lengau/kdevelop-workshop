@@ -198,235 +198,230 @@ void WorkshopToolView::onProjectChanged(int index)
         m_workshopsLayout->insertWidget(0, loadingLabel);
     }
 
-    WorkshopApi::queryAsync(
-        QStringLiteral("/v1/projects"), this, [this, projectPath, loadingLabel](const QJsonDocument& doc) {
-            if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
-                return;
-            }
+    WorkshopApi::queryAsync(QStringLiteral("/v1/projects"), this, [this, projectPath](const QJsonDocument& doc) {
+        if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
+            return;
+        }
 
-            QJsonArray projects;
-            QString projectId;
-            if (!doc.isEmpty()) {
-                projects = doc.object().value(QStringLiteral("result")).toArray();
-                for (const QJsonValue& val : projects) {
-                    QJsonObject proj = val.toObject();
-                    if (proj.value(QStringLiteral("path")).toString() == projectPath) {
-                        projectId = proj.value(QStringLiteral("id")).toString();
-                        break;
-                    }
+        QJsonArray projects;
+        QString projectId;
+        if (!doc.isEmpty()) {
+            projects = doc.object().value(QStringLiteral("result")).toArray();
+            for (const QJsonValue& val : projects) {
+                QJsonObject proj = val.toObject();
+                if (proj.value(QStringLiteral("path")).toString() == projectPath) {
+                    projectId = proj.value(QStringLiteral("id")).toString();
+                    break;
                 }
             }
+        }
 
-            if (projectId.isEmpty()) {
+        if (projectId.isEmpty()) {
+            m_projectId = projectId;
+            m_refreshing = false;
+            if (doc.isEmpty()) {
+                clearLayout();
+                m_workshopsLayout->insertWidget(
+                    0, new QLabel(QStringLiteral("Failed to connect to workshopd API."), m_workshopsContainer));
+            } else {
+                clearLayout();
+                m_workshopsLayout->insertWidget(
+                    0, new QLabel(QStringLiteral("No workshops registered for this project."), m_workshopsContainer));
+            }
+            m_animationTimer->stop();
+            m_pollTimer->stop();
+            return;
+        }
+
+        WorkshopApi::queryAsync(
+            QStringLiteral("/v1/projects/%1/workshops").arg(projectId), this,
+            [this, projectPath, projectId](const QJsonDocument& workshopsDoc) {
+                if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
+                    return;
+                }
+
+                QJsonArray workshops;
+                QJsonArray files;
+                bool success = false;
+                if (!workshopsDoc.isEmpty()) {
+                    QJsonObject result = workshopsDoc.object().value(QStringLiteral("result")).toObject();
+                    workshops = result.value(QStringLiteral("workshops")).toArray();
+                    files = result.value(QStringLiteral("files")).toArray();
+                    success = true;
+                }
+
+                // Return to GUI thread to populate the layout
                 m_projectId = projectId;
                 m_refreshing = false;
-                if (doc.isEmpty()) {
+
+                if (!success) {
                     clearLayout();
                     m_workshopsLayout->insertWidget(
-                        0, new QLabel(QStringLiteral("Failed to connect to workshopd API."), m_workshopsContainer));
-                } else {
+                        0, new QLabel(QStringLiteral("Failed to retrieve workshops list."), m_workshopsContainer));
+                    m_animationTimer->stop();
+                    m_pollTimer->stop();
+                    return;
+                }
+                if (workshops.isEmpty() && files.isEmpty()) {
                     clearLayout();
                     m_workshopsLayout->insertWidget(
                         0,
-                        new QLabel(QStringLiteral("No workshops registered for this project."), m_workshopsContainer));
+                        new QLabel(QStringLiteral("No workshops found. Click 'Init' to create one."),
+                                   m_workshopsContainer));
+                    m_animationTimer->stop();
+                    m_pollTimer->stop();
+                    return;
                 }
-                m_animationTimer->stop();
-                m_pollTimer->stop();
-                return;
-            }
 
-            WorkshopApi::queryAsync(
-                QStringLiteral("/v1/projects/%1/workshops").arg(projectId), this,
-                [this, projectPath, projectId](const QJsonDocument& workshopsDoc) {
-                    if (!ProjectSelectionGuard::selectionMatches(projectPath,
-                                                                 m_projectCombo->currentData().toString())) {
-                        return;
+                // Safely clear the old layout only now, right before populating the new elements
+                clearLayout();
+
+                // Collect active workshop names to distinguish between started/stopped vs not yet launched
+                QStringList activeNames;
+                for (const QJsonValue& val : workshops) {
+                    activeNames << val.toObject().value(QStringLiteral("name")).toString();
+                }
+
+                // Merge and deduplicate active workshops and defined files
+                QMap<QString, QJsonObject> workshopMap;
+
+                // 1. Populate from files as "Off" by default
+                for (const QJsonValue& val : files) {
+                    QJsonObject f = val.toObject();
+                    QString name = f.value(QStringLiteral("name")).toString();
+                    if (!name.isEmpty()) {
+                        QJsonObject ws;
+                        ws.insert(QStringLiteral("name"), name);
+                        ws.insert(QStringLiteral("status"), QStringLiteral("Off"));
+                        workshopMap.insert(name, ws);
                     }
+                }
 
-                    QJsonArray workshops;
-                    QJsonArray files;
-                    bool success = false;
-                    if (!workshopsDoc.isEmpty()) {
-                        QJsonObject result = workshopsDoc.object().value(QStringLiteral("result")).toObject();
-                        workshops = result.value(QStringLiteral("workshops")).toArray();
-                        files = result.value(QStringLiteral("files")).toArray();
-                        success = true;
-                    }
+                // 2. Supplement/Overwrite with running instances (normalizing status string values)
+                for (const QJsonValue& val : workshops) {
+                    QJsonObject ws = val.toObject();
+                    QString name = ws.value(QStringLiteral("name")).toString();
+                    if (!name.isEmpty()) {
+                        QString rawStatus = ws.value(QStringLiteral("status")).toString().trimmed();
+                        QString normalizedStatus = QStringLiteral("Off");
 
-                    // Return to GUI thread to populate the layout
-                    m_projectId = projectId;
-                    m_refreshing = false;
-
-                    if (!success) {
-                        clearLayout();
-                        m_workshopsLayout->insertWidget(
-                            0, new QLabel(QStringLiteral("Failed to retrieve workshops list."), m_workshopsContainer));
-                        m_animationTimer->stop();
-                        m_pollTimer->stop();
-                        return;
-                    }
-                    if (workshops.isEmpty() && files.isEmpty()) {
-                        clearLayout();
-                        m_workshopsLayout->insertWidget(
-                            0,
-                            new QLabel(QStringLiteral("No workshops found. Click 'Init' to create one."),
-                                       m_workshopsContainer));
-                        m_animationTimer->stop();
-                        m_pollTimer->stop();
-                        return;
-                    }
-
-                    // Safely clear the old layout only now, right before populating the new elements
-                    clearLayout();
-
-                    // Collect active workshop names to distinguish between started/stopped vs not yet launched
-                    QStringList activeNames;
-                    for (const QJsonValue& val : workshops) {
-                        activeNames << val.toObject().value(QStringLiteral("name")).toString();
-                    }
-
-                    // Merge and deduplicate active workshops and defined files
-                    QMap<QString, QJsonObject> workshopMap;
-
-                    // 1. Populate from files as "Off" by default
-                    for (const QJsonValue& val : files) {
-                        QJsonObject f = val.toObject();
-                        QString name = f.value(QStringLiteral("name")).toString();
-                        if (!name.isEmpty()) {
-                            QJsonObject ws;
-                            ws.insert(QStringLiteral("name"), name);
-                            ws.insert(QStringLiteral("status"), QStringLiteral("Off"));
-                            workshopMap.insert(name, ws);
-                        }
-                    }
-
-                    // 2. Supplement/Overwrite with running instances (normalizing status string values)
-                    for (const QJsonValue& val : workshops) {
-                        QJsonObject ws = val.toObject();
-                        QString name = ws.value(QStringLiteral("name")).toString();
-                        if (!name.isEmpty()) {
-                            QString rawStatus = ws.value(QStringLiteral("status")).toString().trimmed();
-                            QString normalizedStatus = QStringLiteral("Off");
-
-                            if (rawStatus == QLatin1String("running")) {
-                                normalizedStatus = QStringLiteral("Running");
-                            } else if (rawStatus == QLatin1String("ready")) {
-                                normalizedStatus = QStringLiteral("Ready");
-                            } else if (rawStatus == QLatin1String("stopped")) {
-                                normalizedStatus = QStringLiteral("Stopped");
-                            } else if (rawStatus.isEmpty()) {
-                                normalizedStatus = QStringLiteral("Off");
-                            } else {
-                                // Keep raw status (e.g. "starting", "stopping", etc.) but capitalize it for display
-                                normalizedStatus = rawStatus;
-                                if (!normalizedStatus.isEmpty()) {
-                                    normalizedStatus[0] = normalizedStatus[0].toUpper();
-                                }
-                            }
-
-                            ws.insert(QStringLiteral("status"), normalizedStatus);
-                            workshopMap.insert(name, ws);
-                        }
-                    }
-
-                    int insertIdx = 0;
-                    for (auto it = workshopMap.begin(); it != workshopMap.end(); ++it) {
-                        QJsonObject ws = it.value();
-                        QString name = ws.value(QStringLiteral("name")).toString();
-                        QString status = ws.value(QStringLiteral("status")).toString();
-
-                        // If it exists in 'files' but not in 'workshops', it needs to be launched first
-                        bool needsLaunch = !activeNames.contains(name);
-
-                        // REST states classification
-                        bool isRunningState = (status == QLatin1String("Ready") || status == QLatin1String("Running"));
-                        bool isStoppedState = (status == QLatin1String("Off") || status == QLatin1String("Stopped"));
-                        bool isTransitioning = (!isRunningState && !isStoppedState);
-
-                        if (isTransitioning) {
-                            if (!m_transitioningWorkshops.contains(name)) {
-                                m_transitioningWorkshops.insert(name, status);
-                            }
+                        if (rawStatus == QLatin1String("running")) {
+                            normalizedStatus = QStringLiteral("Running");
+                        } else if (rawStatus == QLatin1String("ready")) {
+                            normalizedStatus = QStringLiteral("Ready");
+                        } else if (rawStatus == QLatin1String("stopped")) {
+                            normalizedStatus = QStringLiteral("Stopped");
+                        } else if (rawStatus.isEmpty()) {
+                            normalizedStatus = QStringLiteral("Off");
                         } else {
-                            // Remove if it completed transitioning
-                            m_transitioningWorkshops.remove(name);
+                            // Keep raw status (e.g. "starting", "stopping", etc.) but capitalize it for display
+                            normalizedStatus = rawStatus;
+                            if (!normalizedStatus.isEmpty()) {
+                                normalizedStatus[0] = normalizedStatus[0].toUpper();
+                            }
                         }
 
-                        auto* rowWidget = new QWidget(m_workshopsContainer);
-                        rowWidget->setContextMenuPolicy(Qt::CustomContextMenu);
-                        connect(rowWidget, &QWidget::customContextMenuRequested, this, [this, name](const QPoint& pos) {
-                            showContextMenu(name, pos);
-                        });
+                        ws.insert(QStringLiteral("status"), normalizedStatus);
+                        workshopMap.insert(name, ws);
+                    }
+                }
 
-                        auto* rowLayout = new QHBoxLayout(rowWidget);
-                        rowLayout->setContentsMargins(0, 4, 0, 4);
+                int insertIdx = 0;
+                for (auto it = workshopMap.begin(); it != workshopMap.end(); ++it) {
+                    QJsonObject ws = it.value();
+                    QString name = ws.value(QStringLiteral("name")).toString();
+                    QString status = ws.value(QStringLiteral("status")).toString();
 
-                        auto* nameLabel = new QLabel(name, rowWidget);
-                        QFont f = nameLabel->font();
-                        f.setBold(true);
-                        nameLabel->setFont(f);
-                        rowLayout->addWidget(nameLabel);
+                    // If it exists in 'files' but not in 'workshops', it needs to be launched first
+                    bool needsLaunch = !activeNames.contains(name);
 
-                        auto* statusLabel = new QLabel(status, rowWidget);
-                        rowLayout->addWidget(statusLabel);
+                    // REST states classification
+                    bool isRunningState = (status == QLatin1String("Ready") || status == QLatin1String("Running"));
+                    bool isStoppedState = (status == QLatin1String("Off") || status == QLatin1String("Stopped"));
+                    bool isTransitioning = (!isRunningState && !isStoppedState);
 
-                        auto* actionBtn = new QPushButton(rowWidget);
-                        actionBtn->setFlat(true);
-                        rowLayout->addWidget(actionBtn);
+                    if (isTransitioning) {
+                        if (!m_transitioningWorkshops.contains(name)) {
+                            m_transitioningWorkshops.insert(name, status);
+                        }
+                    } else {
+                        // Remove if it completed transitioning
+                        m_transitioningWorkshops.remove(name);
+                    }
 
-                        // Track pointers for real-time animations
-                        m_workshopWidgets.insert(name, {statusLabel, actionBtn});
+                    auto* rowWidget = new QWidget(m_workshopsContainer);
+                    rowWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+                    connect(rowWidget, &QWidget::customContextMenuRequested, this, [this, name](const QPoint& pos) {
+                        showContextMenu(name, pos);
+                    });
 
-                        // Check if this workshop is currently transitioning
-                        if (m_transitioningWorkshops.contains(name)) {
-                            statusLabel->setText(m_transitioningWorkshops.value(name) + QStringLiteral("..."));
+                    auto* rowLayout = new QHBoxLayout(rowWidget);
+                    rowLayout->setContentsMargins(0, 4, 0, 4);
+
+                    auto* nameLabel = new QLabel(name, rowWidget);
+                    QFont f = nameLabel->font();
+                    f.setBold(true);
+                    nameLabel->setFont(f);
+                    rowLayout->addWidget(nameLabel);
+
+                    auto* statusLabel = new QLabel(status, rowWidget);
+                    rowLayout->addWidget(statusLabel);
+
+                    auto* actionBtn = new QPushButton(rowWidget);
+                    actionBtn->setFlat(true);
+                    rowLayout->addWidget(actionBtn);
+
+                    // Track pointers for real-time animations
+                    m_workshopWidgets.insert(name, {statusLabel, actionBtn});
+
+                    // Check if this workshop is currently transitioning
+                    if (m_transitioningWorkshops.contains(name)) {
+                        statusLabel->setText(m_transitioningWorkshops.value(name) + QStringLiteral("..."));
+                        statusLabel->setStyleSheet(QStringLiteral("color: #f39c12; font-weight: bold;"));
+                        actionBtn->setIcon(QIcon::fromTheme(QStringLiteral("view-refresh")));
+                        actionBtn->setEnabled(false);
+                        actionBtn->setToolTip(m_transitioningWorkshops.value(name) + QStringLiteral(" workshop..."));
+                    } else {
+                        // Normal state rendering
+                        if (isRunningState) {
+                            statusLabel->setStyleSheet(QStringLiteral("color: #2ecc71; font-weight: bold;"));
+                            actionBtn->setIcon(QIcon::fromTheme(QStringLiteral("media-playback-stop")));
+                            actionBtn->setToolTip(QStringLiteral("Stop Workshop"));
+                            connect(actionBtn, &QPushButton::clicked, this, [this, name]() {
+                                performAction(name, QStringLiteral("stop"));
+                            });
+                        } else if (isStoppedState) {
+                            statusLabel->setStyleSheet(QStringLiteral("color: #7f8c8d;"));
+                            actionBtn->setIcon(QIcon::fromTheme(QStringLiteral("media-playback-start")));
+                            actionBtn->setToolTip(needsLaunch ? QStringLiteral("Launch Workshop")
+                                                              : QStringLiteral("Start Workshop"));
+                            connect(actionBtn, &QPushButton::clicked, this, [this, name, needsLaunch]() {
+                                performAction(name, needsLaunch ? QStringLiteral("launch") : QStringLiteral("start"));
+                            });
+                        } else {
                             statusLabel->setStyleSheet(QStringLiteral("color: #f39c12; font-weight: bold;"));
                             actionBtn->setIcon(QIcon::fromTheme(QStringLiteral("view-refresh")));
                             actionBtn->setEnabled(false);
-                            actionBtn->setToolTip(m_transitioningWorkshops.value(name)
-                                                  + QStringLiteral(" workshop..."));
-                        } else {
-                            // Normal state rendering
-                            if (isRunningState) {
-                                statusLabel->setStyleSheet(QStringLiteral("color: #2ecc71; font-weight: bold;"));
-                                actionBtn->setIcon(QIcon::fromTheme(QStringLiteral("media-playback-stop")));
-                                actionBtn->setToolTip(QStringLiteral("Stop Workshop"));
-                                connect(actionBtn, &QPushButton::clicked, this, [this, name]() {
-                                    performAction(name, QStringLiteral("stop"));
-                                });
-                            } else if (isStoppedState) {
-                                statusLabel->setStyleSheet(QStringLiteral("color: #7f8c8d;"));
-                                actionBtn->setIcon(QIcon::fromTheme(QStringLiteral("media-playback-start")));
-                                actionBtn->setToolTip(needsLaunch ? QStringLiteral("Launch Workshop")
-                                                                  : QStringLiteral("Start Workshop"));
-                                connect(actionBtn, &QPushButton::clicked, this, [this, name, needsLaunch]() {
-                                    performAction(name,
-                                                  needsLaunch ? QStringLiteral("launch") : QStringLiteral("start"));
-                                });
-                            } else {
-                                statusLabel->setStyleSheet(QStringLiteral("color: #f39c12; font-weight: bold;"));
-                                actionBtn->setIcon(QIcon::fromTheme(QStringLiteral("view-refresh")));
-                                actionBtn->setEnabled(false);
-                            }
                         }
-
-                        m_workshopsLayout->insertWidget(insertIdx++, rowWidget);
                     }
 
-                    // Sync timers with transitioning workshops state
-                    if (!m_transitioningWorkshops.isEmpty()) {
-                        if (!m_animationTimer->isActive())
-                            m_animationTimer->start();
-                        if (!m_pollTimer->isActive())
-                            m_pollTimer->start();
-                    } else {
-                        m_animationTimer->stop();
-                        m_pollTimer->stop();
-                    }
+                    m_workshopsLayout->insertWidget(insertIdx++, rowWidget);
+                }
 
-                    Q_EMIT m_plugin->workshopsRefreshed();
-                });
-        });
+                // Sync timers with transitioning workshops state
+                if (!m_transitioningWorkshops.isEmpty()) {
+                    if (!m_animationTimer->isActive())
+                        m_animationTimer->start();
+                    if (!m_pollTimer->isActive())
+                        m_pollTimer->start();
+                } else {
+                    m_animationTimer->stop();
+                    m_pollTimer->stop();
+                }
+
+                Q_EMIT m_plugin->workshopsRefreshed();
+            });
+    });
 }
 
 void WorkshopToolView::showContextMenu(const QString& workshopName, const QPoint& pos)
@@ -534,6 +529,10 @@ void WorkshopToolView::removeWorkshop(const QString& workshopName)
 
     WorkshopApi::queryAsync(
         QStringLiteral("/v1/projects"), this, [this, projectPath, workshopName](const QJsonDocument& doc) {
+            if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
+                return;
+            }
+
             QString projectId;
             if (!doc.isEmpty()) {
                 QJsonArray projects = doc.object().value(QStringLiteral("result")).toArray();
@@ -560,7 +559,12 @@ void WorkshopToolView::removeWorkshop(const QString& workshopName)
             WorkshopApi::queryAsync(
                 QStringLiteral("/v1/projects/%1/workshops").arg(projectId),
                 QJsonDocument(req).toJson(QJsonDocument::Compact), QStringLiteral("POST"), this,
-                [this, workshopName](const QJsonDocument& resp) {
+                [this, projectPath, workshopName](const QJsonDocument& resp) {
+                    if (!ProjectSelectionGuard::selectionMatches(projectPath,
+                                                                 m_projectCombo->currentData().toString())) {
+                        return;
+                    }
+
                     bool success = false;
                     QString changeId;
                     QString errorMessage;
@@ -605,7 +609,12 @@ void WorkshopToolView::removeWorkshop(const QString& workshopName)
 
                     WorkshopApi::queryAsync(
                         QStringLiteral("/v1/changes/%1/wait").arg(changeId), this,
-                        [this, workshopName](const QJsonDocument& waitResp) {
+                        [this, projectPath, workshopName](const QJsonDocument& waitResp) {
+                            if (!ProjectSelectionGuard::selectionMatches(projectPath,
+                                                                         m_projectCombo->currentData().toString())) {
+                                return;
+                            }
+
                             bool waitSuccess = true;
                             QString errorMessage;
                             if (!waitResp.isEmpty()) {
@@ -672,6 +681,10 @@ void WorkshopToolView::performAction(const QString& workshopName, const QString&
 
     WorkshopApi::queryAsync(
         QStringLiteral("/v1/projects"), this, [this, projectPath, workshopName, action](const QJsonDocument& doc) {
+            if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
+                return;
+            }
+
             QString projectId;
             if (!doc.isEmpty()) {
                 QJsonArray projects = doc.object().value(QStringLiteral("result")).toArray();
@@ -700,7 +713,12 @@ void WorkshopToolView::performAction(const QString& workshopName, const QString&
             WorkshopApi::queryAsync(
                 QStringLiteral("/v1/projects/%1/workshops").arg(projectId),
                 QJsonDocument(req).toJson(QJsonDocument::Compact), QStringLiteral("POST"), this,
-                [this, workshopName, action](const QJsonDocument& resp) {
+                [this, projectPath, workshopName, action](const QJsonDocument& resp) {
+                    if (!ProjectSelectionGuard::selectionMatches(projectPath,
+                                                                 m_projectCombo->currentData().toString())) {
+                        return;
+                    }
+
                     bool success = false;
                     QString changeId;
                     QString errorMessage;
@@ -741,7 +759,12 @@ void WorkshopToolView::performAction(const QString& workshopName, const QString&
 
                     WorkshopApi::queryAsync(
                         QStringLiteral("/v1/changes/%1/wait").arg(changeId), this,
-                        [this, workshopName, action](const QJsonDocument& waitResp) {
+                        [this, projectPath, workshopName, action](const QJsonDocument& waitResp) {
+                            if (!ProjectSelectionGuard::selectionMatches(projectPath,
+                                                                         m_projectCombo->currentData().toString())) {
+                                return;
+                            }
+
                             bool waitSuccess = true;
                             QString errorMessage;
                             if (!waitResp.isEmpty()) {
