@@ -1,6 +1,10 @@
 #include "workshopapi.h"
 #include "debug.h"
-#include <QLocalSocket>
+#include <QEventLoop>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QUrl>
 #include <KSharedConfig>
 #include <KConfigGroup>
 
@@ -8,92 +12,39 @@ namespace WorkshopApi {
 
 QJsonDocument query(const QString& path, const QByteArray& postData, const QString& method)
 {
-    QLocalSocket socket;
-
-    // Read user-defined socket path from configuration
     auto config = KSharedConfig::openConfig(QStringLiteral("kdevelop-workshoprc"));
     KConfigGroup group = config->group(QStringLiteral("General"));
     QString socketPath = group.readEntry("SocketPath", QString()).trimmed();
-
-    // Default to the Snap-specific socket path if empty
-    if (socketPath.isEmpty()) {
+    if (socketPath.isEmpty())
         socketPath = QStringLiteral("/var/snap/workshop/common/workshop/workshop.socket");
-    }
 
-    socket.connectToServer(socketPath);
-    // 15 seconds connection timeout to allow systemd to spin up the socket-activated daemon
-    if (!socket.waitForConnected(15000)) {
-        qCWarning(PLUGIN_KDEVELOP_WORKSHOP) << "Failed to connect to socket:" << socketPath;
-        return {};
-    }
+    QNetworkAccessManager nam;
+    QNetworkRequest request(QUrl(QStringLiteral("http://localhost") + path));
+    request.setAttribute(QNetworkRequest::FullLocalServerNameAttribute, socketPath);
+    if (!postData.isEmpty())
+        request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
 
-    QByteArray request;
-    request.append(method.toUtf8() + " " + path.toUtf8() + " HTTP/1.1\r\n");
-    request.append("Host: localhost\r\n");
-    request.append("Connection: close\r\n");
-    if (!postData.isEmpty()) {
-        request.append("Content-Type: application/json\r\n");
-        request.append("Content-Length: " + QByteArray::number(postData.length()) + "\r\n");
-        request.append("\r\n");
-        request.append(postData);
+    QNetworkReply* reply = nullptr;
+    if (method == QStringLiteral("POST")) {
+        reply = nam.post(request, postData);
+    } else if (method == QStringLiteral("GET")) {
+        reply = nam.get(request);
     } else {
-        request.append("\r\n");
+        reply = nam.sendCustomRequest(request, method.toUtf8(), postData);
     }
 
-    socket.write(request);
-    socket.flush();
+    QEventLoop loop;
+    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    loop.exec();
 
-    QByteArray responseData;
-    while (socket.state() == QLocalSocket::ConnectedState || socket.bytesAvailable() > 0) {
-        if (socket.bytesAvailable() > 0) {
-            responseData.append(socket.readAll());
-        } else {
-            // Wait up to 60 seconds for the response (necessary for blocking /wait requests)
-            if (!socket.waitForReadyRead(60000)) {
-                break;
-            }
-        }
-    }
-
-    int headerEnd = responseData.indexOf("\r\n\r\n");
-    if (headerEnd == -1) {
-        qCWarning(PLUGIN_KDEVELOP_WORKSHOP) << "No HTTP header terminator in response for" << method << path;
+    if (reply->error() != QNetworkReply::NoError) {
+        qCWarning(PLUGIN_KDEVELOP_WORKSHOP) << "Request failed for" << method << path << ":" << reply->errorString();
+        reply->deleteLater();
         return {};
     }
 
-    QByteArray headers = responseData.left(headerEnd);
-    QByteArray body = responseData.mid(headerEnd + 4);
-
-    qCDebug(PLUGIN_KDEVELOP_WORKSHOP) << method << path << "→ headers:" << headers.left(200);
-
-    // Decode chunked transfer encoding when the server uses it
-    if (headers.toLower().contains("transfer-encoding: chunked")) {
-        QByteArray decoded;
-        int pos = 0;
-        while (pos < body.size()) {
-            int lineEnd = body.indexOf("\r\n", pos);
-            if (lineEnd == -1)
-                break;
-            QByteArray sizeLine = body.mid(pos, lineEnd - pos);
-            // Strip chunk extensions (e.g. "fa1;ext=value" → "fa1")
-            int semiColon = sizeLine.indexOf(';');
-            if (semiColon != -1)
-                sizeLine = sizeLine.left(semiColon);
-            bool ok = false;
-            int chunkSize = sizeLine.trimmed().toInt(&ok, 16);
-            if (!ok || chunkSize < 0)
-                break;
-            if (chunkSize == 0)
-                break;
-            pos = lineEnd + 2;
-            // Guard against truncated responses
-            if (pos + chunkSize > body.size())
-                break;
-            decoded.append(body.mid(pos, chunkSize));
-            pos += chunkSize + 2; // skip chunk data + trailing \r\n
-        }
-        body = decoded;
-    }
+    const QByteArray body = reply->readAll();
+    reply->deleteLater();
 
     auto result = QJsonDocument::fromJson(body);
     if (result.isNull()) {
