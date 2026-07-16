@@ -223,9 +223,6 @@ void WorkshopTerminalToolView::updateWorkshopState()
 
     QString workshopName = m_workshopCombo->currentText();
     QVariant dataVal = m_workshopCombo->itemData(index);
-    qWarning() << "=================> WorkshopTerminalToolView::updateWorkshopState index:" << index
-               << "name:" << workshopName << "data type:" << dataVal.typeName() << "data value:" << dataVal
-               << "<=================";
 
     QVariantList data = dataVal.toList();
 
@@ -235,9 +232,6 @@ void WorkshopTerminalToolView::updateWorkshopState()
         status = data.at(0).toString();
         needsLaunch = data.at(1).toBool();
     }
-
-    qWarning() << "=================> WorkshopTerminalToolView::updateWorkshopState status:" << status
-               << "needsLaunch:" << needsLaunch << "<=================";
 
     bool isReady = (status.toLower() == QLatin1String("ready") || status.toLower() == QLatin1String("running"));
 

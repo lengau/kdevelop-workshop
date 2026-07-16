@@ -32,7 +32,7 @@ public:
     }
     QWidget* create(QWidget* parent = nullptr) override
     {
-        qWarning() << "=================> WorkshopToolViewFactory::create called! <=================";
+        qCDebug(PLUGIN_KDEVELOP_WORKSHOP) << "WorkshopToolViewFactory::create";
         return new WorkshopToolView(m_plugin, parent);
     }
     QString id() const override
@@ -63,7 +63,7 @@ public:
     }
     QWidget* create(QWidget* parent = nullptr) override
     {
-        qWarning() << "=================> WorkshopTerminalToolViewFactory::create called! <=================";
+        qCDebug(PLUGIN_KDEVELOP_WORKSHOP) << "WorkshopTerminalToolViewFactory::create";
         return new WorkshopTerminalToolView(m_plugin, parent);
     }
     QString id() const override
@@ -92,18 +92,18 @@ kdevelop_workshop::kdevelop_workshop(QObject* parent, const KPluginMetaData& met
 {
     Q_UNUSED(args);
 
-    qWarning() << "=================> Workshop plugin constructor called! <=================";
+    qCInfo(PLUGIN_KDEVELOP_WORKSHOP) << "Plugin loaded from:" << metaData.fileName();
 
     connect(KDevelop::ICore::self()->projectController(), &KDevelop::IProjectController::projectOpened, this,
             &kdevelop_workshop::projectOpened);
 
     QTimer::singleShot(0, this, [this]() {
-        qWarning() << "=================> Registering Workshop ToolView <=================";
+        qCDebug(PLUGIN_KDEVELOP_WORKSHOP) << "Registering Workshop tool view";
         m_factory = new WorkshopToolViewFactory(this);
         KDevelop::ICore::self()->uiController()->addToolView(QStringLiteral("Workshop"), m_factory,
                                                              KDevelop::IUiController::CreateAndRaise);
 
-        qWarning() << "=================> Registering Workshop Terminal ToolView <=================";
+        qCDebug(PLUGIN_KDEVELOP_WORKSHOP) << "Registering Workshop Terminal tool view";
         m_terminalFactory = new WorkshopTerminalToolViewFactory(this);
         KDevelop::ICore::self()->uiController()->addToolView(QStringLiteral("Workshop Terminal"), m_terminalFactory,
                                                              KDevelop::IUiController::CreateAndRaise);
@@ -141,7 +141,8 @@ void kdevelop_workshop::addWorkshopsForProject(KDevelop::IProject* project)
     auto* thread = QThread::create([this, projectPath]() {
         QJsonDocument doc = WorkshopApi::query(QStringLiteral("/v1/projects"));
         if (doc.isEmpty()) {
-            qWarning() << "Workshop API: Failed to connect to /v1/projects (daemon socket activation timeout?)";
+            qCWarning(PLUGIN_KDEVELOP_WORKSHOP)
+                << "Failed to connect to /v1/projects (daemon socket activation timeout?)";
             return;
         }
 
