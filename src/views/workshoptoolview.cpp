@@ -249,7 +249,7 @@ void WorkshopToolView::onProjectChanged(int index)
             } else {
                 clearLayout();
                 m_workshopsLayout->insertWidget(
-                    0, new QLabel(QStringLiteral("No workshops registered for this project."), m_workshopsContainer));
+                    0, new QLabel(QStringLiteral("Project is not registered in workshopd."), m_workshopsContainer));
             }
             m_animationTimer->stop();
             m_pollTimer->stop();
@@ -266,11 +266,20 @@ void WorkshopToolView::onProjectChanged(int index)
                 QJsonArray workshops;
                 QJsonArray files;
                 bool success = false;
+                QString errorMessage;
                 if (!workshopsDoc.isEmpty()) {
-                    QJsonObject result = workshopsDoc.object().value(QStringLiteral("result")).toObject();
-                    workshops = result.value(QStringLiteral("workshops")).toArray();
-                    files = result.value(QStringLiteral("files")).toArray();
-                    success = true;
+                    QJsonObject response = workshopsDoc.object();
+                    if (response.value(QStringLiteral("type")).toString() == QLatin1String("error")) {
+                        errorMessage = response.value(QStringLiteral("result"))
+                                           .toObject()
+                                           .value(QStringLiteral("message"))
+                                           .toString();
+                    } else {
+                        QJsonObject result = response.value(QStringLiteral("result")).toObject();
+                        workshops = result.value(QStringLiteral("workshops")).toArray();
+                        files = result.value(QStringLiteral("files")).toArray();
+                        success = true;
+                    }
                 }
 
                 // Return to GUI thread to populate the layout
@@ -280,7 +289,10 @@ void WorkshopToolView::onProjectChanged(int index)
                 if (!success) {
                     clearLayout();
                     m_workshopsLayout->insertWidget(
-                        0, new QLabel(QStringLiteral("Failed to retrieve workshops list."), m_workshopsContainer));
+                        0,
+                        new QLabel(errorMessage.isEmpty() ? QStringLiteral("Failed to retrieve workshops list.")
+                                                          : errorMessage,
+                                   m_workshopsContainer));
                     m_animationTimer->stop();
                     m_pollTimer->stop();
                     return;
