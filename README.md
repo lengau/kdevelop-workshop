@@ -21,7 +21,6 @@ On openSUSE & similar with a 64 bit system add:
 
 If you are unsure, check in the installation log the path to which the plugin is installed.
 
-
 Example:
 When CMAKE_INSTALL_PREFIX is set to "/home/userX/projects/mykdevplugin/" and
 this is a Debian 64-bit system, open a console and enter:
