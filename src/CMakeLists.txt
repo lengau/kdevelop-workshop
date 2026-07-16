@@ -22,12 +22,19 @@ kdevplatform_add_plugin(kdevelop-workshop
     SOURCES ${kdevelop-workshop_SRCS}
 )
 
+set_source_files_properties(
+    sketchsdk/parsesketchsdk.cpp
+    wizard/workshopwizard.cpp
+    PROPERTIES COMPILE_OPTIONS "-fexceptions"
+)
+
 target_link_libraries(kdevelop-workshop
     KDev::Interfaces
     KDev::Util
     KDev::Sublime
     KF6::Parts
     Qt6::Network
+    yaml-cpp::yaml-cpp
 )
 
 # Ensure src/ and build/src/ are on the include path for all subdirectory sources

@@ -19,6 +19,8 @@ find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS
     Parts
 )
 
+find_package(yaml-cpp CONFIG REQUIRED)
+
 find_package(KDevPlatform 6.0 REQUIRED)
 
 add_subdirectory(src)
