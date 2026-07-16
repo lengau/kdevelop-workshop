@@ -5,6 +5,7 @@
 #include "sketchsdk/sketchsdkpanel.h"
 #include "sketchsdk/parsesketchsdk.h"
 #include "views/workshopcontextmenu.h"
+#include "views/projectselectionguard.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -199,7 +200,7 @@ void WorkshopToolView::onProjectChanged(int index)
 
     WorkshopApi::queryAsync(
         QStringLiteral("/v1/projects"), this, [this, projectPath, loadingLabel](const QJsonDocument& doc) {
-            if (m_projectCombo->currentData().toString() != projectPath) {
+            if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
                 return;
             }
 
@@ -237,7 +238,8 @@ void WorkshopToolView::onProjectChanged(int index)
             WorkshopApi::queryAsync(
                 QStringLiteral("/v1/projects/%1/workshops").arg(projectId), this,
                 [this, projectPath, projectId, loadingLabel](const QJsonDocument& workshopsDoc) {
-                    if (m_projectCombo->currentData().toString() != projectPath) {
+                    if (!ProjectSelectionGuard::selectionMatches(projectPath,
+                                                                 m_projectCombo->currentData().toString())) {
                         return;
                     }
 
