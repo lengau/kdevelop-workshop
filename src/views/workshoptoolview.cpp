@@ -25,6 +25,7 @@
 #include <QMessageBox>
 #include <QFile>
 #include <QDir>
+#include <QStandardPaths>
 #include <interfaces/icore.h>
 #include <interfaces/iprojectcontroller.h>
 #include <interfaces/iproject.h>
@@ -464,8 +465,9 @@ void WorkshopToolView::showContextMenu(const QString& workshopName, const QPoint
         SketchSdkData sketchData;
         QString sketchYamlPath;
         if (!m_projectId.isEmpty()) {
-            sketchYamlPath = QDir::homePath() + QStringLiteral("/.local/share/workshop/id/") + m_projectId
-                + QStringLiteral("/") + workshopName + QStringLiteral("/sdk/sketch/current/sdk.yaml");
+            const QString dataPath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+            sketchYamlPath = QDir(dataPath).filePath(
+                QStringLiteral("workshop/id/%1/%2/sdk/sketch/current/sdk.yaml").arg(m_projectId, workshopName));
         }
 
         if (!sketchYamlPath.isEmpty() && QFile::exists(sketchYamlPath)) {
