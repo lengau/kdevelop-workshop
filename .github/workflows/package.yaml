@@ -37,7 +37,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          mk-build-deps -i -r -t "apt-get -y --no-install-recommends install" debian/control
+          mk-build-deps -i -r -t "apt-get -y --no-install-recommends" debian/control
 
       - name: Build Debian package
         run: |
