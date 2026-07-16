@@ -1,6 +1,7 @@
 #include "workshopterminaltoolview.h"
 #include "kdevelop-workshop.h"
 #include "api/workshopapi.h"
+#include "views/projectselectionguard.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -143,6 +144,10 @@ void WorkshopTerminalToolView::onProjectChanged(int index)
     QString projectPath = m_projectCombo->itemData(index).toString();
 
     WorkshopApi::queryAsync(QStringLiteral("/v1/projects"), this, [this, projectPath](const QJsonDocument& doc) {
+        if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
+            return;
+        }
+
         QString projectId;
         if (!doc.isEmpty()) {
             QJsonArray projects = doc.object().value(QStringLiteral("result")).toArray();
@@ -164,46 +169,50 @@ void WorkshopTerminalToolView::onProjectChanged(int index)
             return;
         }
 
-        WorkshopApi::queryAsync(QStringLiteral("/v1/projects/%1/workshops").arg(projectId), this,
-                                [this](const QJsonDocument& workshopsDoc) {
-                                    QJsonArray workshops;
-                                    if (!workshopsDoc.isEmpty()) {
-                                        QJsonObject result =
-                                            workshopsDoc.object().value(QStringLiteral("result")).toObject();
-                                        workshops = result.value(QStringLiteral("workshops")).toArray();
-                                    }
+        WorkshopApi::queryAsync(
+            QStringLiteral("/v1/projects/%1/workshops").arg(projectId), this,
+            [this, projectPath](const QJsonDocument& workshopsDoc) {
+                if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
+                    return;
+                }
 
-                                    m_refreshing = false;
-                                    m_workshopCombo->blockSignals(true);
-                                    m_workshopCombo->clear();
+                QJsonArray workshops;
+                if (!workshopsDoc.isEmpty()) {
+                    QJsonObject result = workshopsDoc.object().value(QStringLiteral("result")).toObject();
+                    workshops = result.value(QStringLiteral("workshops")).toArray();
+                }
 
-                                    int firstReadyIndex = -1;
-                                    int idx = 0;
+                m_refreshing = false;
+                m_workshopCombo->blockSignals(true);
+                m_workshopCombo->clear();
 
-                                    for (const QJsonValue& val : workshops) {
-                                        QJsonObject ws = val.toObject();
-                                        QString name = ws.value(QStringLiteral("name")).toString();
-                                        QString status = ws.value(QStringLiteral("status")).toString();
+                int firstReadyIndex = -1;
+                int idx = 0;
 
-                                        bool isReady = (status.toLower() == QLatin1String("ready")
-                                                        || status.toLower() == QLatin1String("running"));
-                                        bool needsLaunch = status.isEmpty() || status.toLower() == QLatin1String("off");
+                for (const QJsonValue& val : workshops) {
+                    QJsonObject ws = val.toObject();
+                    QString name = ws.value(QStringLiteral("name")).toString();
+                    QString status = ws.value(QStringLiteral("status")).toString();
 
-                                        m_workshopCombo->addItem(name, QVariantList{status, needsLaunch});
+                    bool isReady =
+                        (status.toLower() == QLatin1String("ready") || status.toLower() == QLatin1String("running"));
+                    bool needsLaunch = status.isEmpty() || status.toLower() == QLatin1String("off");
 
-                                        if (isReady && firstReadyIndex == -1) {
-                                            firstReadyIndex = idx;
-                                        }
-                                        idx++;
-                                    }
+                    m_workshopCombo->addItem(name, QVariantList{status, needsLaunch});
 
-                                    if (m_workshopCombo->count() > 0) {
-                                        m_workshopCombo->setCurrentIndex(firstReadyIndex != -1 ? firstReadyIndex : 0);
-                                    }
+                    if (isReady && firstReadyIndex == -1) {
+                        firstReadyIndex = idx;
+                    }
+                    idx++;
+                }
 
-                                    m_workshopCombo->blockSignals(false);
-                                    updateWorkshopState();
-                                });
+                if (m_workshopCombo->count() > 0) {
+                    m_workshopCombo->setCurrentIndex(firstReadyIndex != -1 ? firstReadyIndex : 0);
+                }
+
+                m_workshopCombo->blockSignals(false);
+                updateWorkshopState();
+            });
     });
 }
 

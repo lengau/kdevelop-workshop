@@ -4,6 +4,7 @@ set(kdevelop-workshop_SRCS
     config/workshopconfigpage.cpp
     runtime/workshopruntime.cpp
     views/workshopcontextmenu.cpp
+    views/projectselectionguard.cpp
     views/workshoptoolview.cpp
     views/workshopterminaltoolview.cpp
     wizard/workshopwizard.cpp
