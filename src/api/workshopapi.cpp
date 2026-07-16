@@ -29,15 +29,19 @@ QJsonDocument query(const QString& path, const QByteArray& postData, const QStri
     QEventLoop loop;
     std::optional<QJsonDocument> responseDoc;
     auto replyHandler = [&loop, &responseDoc, &method, &path](QRestReply& reply) {
-        if (!reply.isSuccess()) {
+        if (reply.hasError()) {
             qCWarning(PLUGIN_KDEVELOP_WORKSHOP) << "Request failed for" << method << path << ":" << reply.errorString();
             loop.quit();
             return;
         }
 
-        responseDoc = reply.readJson();
-        if (!responseDoc.has_value()) {
-            qCWarning(PLUGIN_KDEVELOP_WORKSHOP) << "Failed to parse JSON body for" << method << path;
+        const QByteArray body = reply.readBody();
+        const QJsonDocument parsedDoc = QJsonDocument::fromJson(body);
+        if (parsedDoc.isNull()) {
+            qCWarning(PLUGIN_KDEVELOP_WORKSHOP)
+                << "Failed to parse JSON body for" << method << path << "- body prefix:" << body.left(120);
+        } else {
+            responseDoc = parsedDoc;
         }
 
         loop.quit();
@@ -46,11 +50,7 @@ QJsonDocument query(const QString& path, const QByteArray& postData, const QStri
     if (method == QStringLiteral("POST")) {
         rest.post(request, postData, &loop, replyHandler);
     } else if (method == QStringLiteral("GET")) {
-        if (postData.isEmpty()) {
-            rest.get(request, &loop, replyHandler);
-        } else {
-            rest.get(request, postData, &loop, replyHandler);
-        }
+        rest.get(request, &loop, replyHandler);
     } else {
         rest.sendCustomRequest(request, method.toUtf8(), postData, &loop, replyHandler);
     }
