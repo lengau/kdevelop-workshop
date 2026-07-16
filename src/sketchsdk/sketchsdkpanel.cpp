@@ -24,7 +24,8 @@
 #include <QAccessible>
 #include <QAccessibleEvent>
 #include <QVBoxLayout>
-#include <QMessageBox>
+#include <KMessageBox>
+#include <KStandardGuiItem>
 #include <QRegularExpression>
 #include <KLocalizedString>
 
@@ -81,7 +82,7 @@ SketchSdkPanel::~SketchSdkPanel()
 void SketchSdkPanel::reject()
 {
     if (m_process) {
-        QMessageBox::information(this, i18n("Please wait for the current workshop command to finish."),
+        KMessageBox::information(this, i18n("Please wait for the current workshop command to finish."),
                                  i18n("Operation in Progress"));
         return;
     }
@@ -375,11 +376,10 @@ void SketchSdkPanel::ejectSketchSdk()
 
 void SketchSdkPanel::removeSketchSdk()
 {
-    auto result = QMessageBox::question(
-        this, i18n("Remove Sketch SDK"),
-        i18n("Are you sure you want to remove the sketch SDK from workshop \"%1\"?", m_workshopName),
-        QMessageBox::Yes | QMessageBox::No);
-    if (result != QMessageBox::Yes) {
+    auto result = KMessageBox::questionTwoActions(
+        this, i18n("Are you sure you want to remove the sketch SDK from workshop \"%1\"?", m_workshopName),
+        i18n("Remove Sketch SDK"), KStandardGuiItem::remove(), KStandardGuiItem::cancel());
+    if (result != KMessageBox::PrimaryAction) {
         return;
     }
 
@@ -570,7 +570,7 @@ void SketchSdkPanel::finishWithError(const QString& error)
     m_standardError.clear();
     m_statusLabel->setText(error);
     m_statusLabel->show();
-    QMessageBox::critical(this, i18n("Sketch SDK Error"), error);
+    KMessageBox::error(this, error, i18n("Sketch SDK Error"));
     Q_EMIT errorOccurred(error);
 }
 

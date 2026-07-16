@@ -23,7 +23,9 @@
 #include <QTimer>
 #include <QSplitter>
 #include <QMenu>
-#include <QMessageBox>
+#include <KMessageBox>
+#include <KStandardGuiItem>
+#include <KLocalizedString>
 #include <QFile>
 #include <QDir>
 #include <QStandardPaths>
@@ -494,13 +496,14 @@ void WorkshopToolView::removeWorkshop(const QString& workshopName)
     if (projectPath.isEmpty())
         return;
 
-    auto result = QMessageBox::question(this, QStringLiteral("Remove Workshop"),
-                                        QStringLiteral("Are you sure you want to remove the workshop \"%1\"?\nThis "
-                                                       "will delete the configuration file and destroy the container.")
-                                            .arg(workshopName),
-                                        QMessageBox::Yes | QMessageBox::No);
+    auto result = KMessageBox::questionTwoActions(this,
+                                                  i18n("Are you sure you want to remove the workshop \"%1\"?\nThis "
+                                                       "will delete the configuration file and destroy the container.",
+                                                       workshopName),
+                                                  i18n("Remove Workshop"), KStandardGuiItem::remove(),
+                                                  KStandardGuiItem::cancel());
 
-    if (result != QMessageBox::Yes) {
+    if (result != KMessageBox::PrimaryAction) {
         return;
     }
 

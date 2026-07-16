@@ -37,6 +37,7 @@ target_link_libraries(kdevelop-workshop
     KDev::Sublime
     KF6::ConfigCore
     KF6::Parts
+    KF6::WidgetsAddons
     Qt6::Network
     yaml-cpp::yaml-cpp
 )

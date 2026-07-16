@@ -14,7 +14,8 @@
 #include <QTimer>
 #include <QDir>
 #include <QPointer>
-#include <QMessageBox>
+#include <KMessageBox>
+#include <KLocalizedString>
 
 #include <KPluginFactory>
 #include <KParts/ReadOnlyPart>
@@ -460,10 +461,9 @@ void WorkshopTerminalToolView::startWorkshop()
                 if (!success) {
                     m_startBtn->setEnabled(true);
                     updateWorkshopState();
-                    QMessageBox::critical(this, QStringLiteral("Action Failed"),
-                                          QStringLiteral("Failed to start/stop/launch workshop %1: %2")
-                                              .arg(workshopName)
-                                              .arg(errorMessage));
+                    KMessageBox::error(this,
+                                       i18n("Failed to start/stop/launch workshop %1: %2", workshopName, errorMessage),
+                                       i18n("Action Failed"));
                 } else {
                     Q_EMIT m_plugin->workshopsRefreshed();
                 }

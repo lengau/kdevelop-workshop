@@ -10,6 +10,7 @@ Build-Depends: debhelper-compat (= 13),
                qt6-base-dev (>= 6.9.0),
                libkf6i18n-dev,
                libkf6parts-dev,
+               libkf6widgetsaddons-dev,
                kdevelop-dev
 Standards-Version: 4.6.2
 Homepage: https://github.com/lengau/kdevelop-workshop
