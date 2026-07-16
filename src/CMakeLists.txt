@@ -11,6 +11,8 @@ set(kdevelop-workshop_SRCS
     sketchsdk/parsesketchsdk.cpp
 )
 
+KCONFIG_ADD_KCFG_FILES(kdevelop-workshop_SRCS workshopsettings.kcfgc)
+
 ecm_qt_declare_logging_category(kdevelop-workshop_SRCS
     HEADER debug.h
     IDENTIFIER PLUGIN_KDEVELOP_WORKSHOP
@@ -22,8 +24,6 @@ ecm_qt_declare_logging_category(kdevelop-workshop_SRCS
 kdevplatform_add_plugin(kdevelop-workshop
     SOURCES ${kdevelop-workshop_SRCS}
 )
-
-KCONFIG_ADD_KCFG_FILES(kdevelop-workshop workshopsettings.kcfgc)
 
 set_source_files_properties(
     sketchsdk/parsesketchsdk.cpp
