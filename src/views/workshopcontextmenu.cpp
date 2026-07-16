@@ -8,16 +8,24 @@ WorkshopContextMenuActions populateWorkshopContextMenu(QMenu* menu, const std::f
                                                        const std::function<void()>& onSketchSdk,
                                                        const std::function<void()>& onRemove)
 {
+    if (!menu) {
+        return {};
+    }
+
     auto* editAction =
         menu->addAction(QIcon::fromTheme(QStringLiteral("document-edit")), QStringLiteral("Edit Workshop"));
     QObject::connect(editAction, &QAction::triggered, menu, [onEdit]() {
-        onEdit();
+        if (onEdit) {
+            onEdit();
+        }
     });
 
     auto* sketchSdkAction =
         menu->addAction(QIcon::fromTheme(QStringLiteral("document-edit-sign")), QStringLiteral("Sketch SDK..."));
     QObject::connect(sketchSdkAction, &QAction::triggered, menu, [onSketchSdk]() {
-        onSketchSdk();
+        if (onSketchSdk) {
+            onSketchSdk();
+        }
     });
 
     menu->addSeparator();
@@ -25,7 +33,9 @@ WorkshopContextMenuActions populateWorkshopContextMenu(QMenu* menu, const std::f
     auto* removeAction =
         menu->addAction(QIcon::fromTheme(QStringLiteral("edit-delete")), QStringLiteral("Remove Workshop"));
     QObject::connect(removeAction, &QAction::triggered, menu, [onRemove]() {
-        onRemove();
+        if (onRemove) {
+            onRemove();
+        }
     });
 
     return {editAction, sketchSdkAction, removeAction};

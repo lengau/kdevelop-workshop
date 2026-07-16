@@ -11,6 +11,8 @@ class TestWorkshopContextMenu : public QObject
 private Q_SLOTS:
     void createsExpectedActions();
     void triggersBoundCallbacks();
+    void handlesNullMenu();
+    void ignoresEmptyCallbacks();
 };
 
 void TestWorkshopContextMenu::createsExpectedActions()
@@ -60,6 +62,27 @@ void TestWorkshopContextMenu::triggersBoundCallbacks()
     QCOMPARE(editCount, 1);
     QCOMPARE(sketchCount, 1);
     QCOMPARE(removeCount, 1);
+}
+
+void TestWorkshopContextMenu::handlesNullMenu()
+{
+    const auto actions = populateWorkshopContextMenu(nullptr, []() {}, []() {}, []() {});
+    QVERIFY(actions.editAction == nullptr);
+    QVERIFY(actions.sketchSdkAction == nullptr);
+    QVERIFY(actions.removeAction == nullptr);
+}
+
+void TestWorkshopContextMenu::ignoresEmptyCallbacks()
+{
+    QMenu menu;
+    const auto actions = populateWorkshopContextMenu(&menu, {}, {}, {});
+    QVERIFY(actions.editAction != nullptr);
+    QVERIFY(actions.sketchSdkAction != nullptr);
+    QVERIFY(actions.removeAction != nullptr);
+
+    actions.editAction->trigger();
+    actions.sketchSdkAction->trigger();
+    actions.removeAction->trigger();
 }
 
 QTEST_MAIN(TestWorkshopContextMenu)
