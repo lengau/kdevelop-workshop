@@ -29,3 +29,7 @@ target_include_directories(test_workshopcontextmenu PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/views
 )
+
+set_tests_properties(test_workshopcontextmenu PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
