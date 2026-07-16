@@ -1,6 +1,6 @@
 #include "workshopterminaltoolview.h"
 #include "kdevelop-workshop.h"
-#include "workshopapi.h"
+#include "api/workshopapi.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>

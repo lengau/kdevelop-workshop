@@ -1,9 +1,9 @@
 #include "workshoptoolview.h"
 #include "kdevelop-workshop.h"
-#include "workshopapi.h"
-#include "workshopwizard.h"
-#include "sketchsdkpanel.h"
-#include "parsesketchsdk.h"
+#include "api/workshopapi.h"
+#include "wizard/workshopwizard.h"
+#include "sketchsdk/sketchsdkpanel.h"
+#include "sketchsdk/parsesketchsdk.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
