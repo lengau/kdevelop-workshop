@@ -223,8 +223,7 @@ void WorkshopToolView::onProjectChanged(int index)
     }
 
     WorkshopApi::queryAsync(QStringLiteral("/v1/projects"), this, [this, projectPath](const QJsonDocument& doc) {
-        if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
-            m_refreshing = false;
+        if (!ProjectSelectionGuard::selectionMatches(projectPath, m_lastProjectPath)) {
             return;
         }
 
@@ -261,8 +260,7 @@ void WorkshopToolView::onProjectChanged(int index)
         WorkshopApi::queryAsync(
             QStringLiteral("/v1/projects/%1/workshops").arg(projectId), this,
             [this, projectPath, projectId](const QJsonDocument& workshopsDoc) {
-                if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
-                    m_refreshing = false;
+                if (!ProjectSelectionGuard::selectionMatches(projectPath, m_lastProjectPath)) {
                     return;
                 }
 
@@ -555,8 +553,7 @@ void WorkshopToolView::removeWorkshop(const QString& workshopName)
 
     WorkshopApi::queryAsync(
         QStringLiteral("/v1/projects"), this, [this, projectPath, workshopName](const QJsonDocument& doc) {
-            if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
-                clearTransitionState(workshopName);
+            if (!ProjectSelectionGuard::selectionMatches(projectPath, m_lastProjectPath)) {
                 return;
             }
 
@@ -587,9 +584,7 @@ void WorkshopToolView::removeWorkshop(const QString& workshopName)
                 QStringLiteral("/v1/projects/%1/workshops").arg(projectId),
                 QJsonDocument(req).toJson(QJsonDocument::Compact), QStringLiteral("POST"), this,
                 [this, projectPath, workshopName](const QJsonDocument& resp) {
-                    if (!ProjectSelectionGuard::selectionMatches(projectPath,
-                                                                 m_projectCombo->currentData().toString())) {
-                        clearTransitionState(workshopName);
+                    if (!ProjectSelectionGuard::selectionMatches(projectPath, m_lastProjectPath)) {
                         return;
                     }
 
@@ -638,9 +633,7 @@ void WorkshopToolView::removeWorkshop(const QString& workshopName)
                     WorkshopApi::queryAsync(
                         QStringLiteral("/v1/changes/%1/wait").arg(changeId), this,
                         [this, projectPath, workshopName](const QJsonDocument& waitResp) {
-                            if (!ProjectSelectionGuard::selectionMatches(projectPath,
-                                                                         m_projectCombo->currentData().toString())) {
-                                clearTransitionState(workshopName);
+                            if (!ProjectSelectionGuard::selectionMatches(projectPath, m_lastProjectPath)) {
                                 return;
                             }
 
@@ -710,8 +703,7 @@ void WorkshopToolView::performAction(const QString& workshopName, const QString&
 
     WorkshopApi::queryAsync(
         QStringLiteral("/v1/projects"), this, [this, projectPath, workshopName, action](const QJsonDocument& doc) {
-            if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
-                clearTransitionState(workshopName);
+            if (!ProjectSelectionGuard::selectionMatches(projectPath, m_lastProjectPath)) {
                 return;
             }
 
@@ -744,9 +736,7 @@ void WorkshopToolView::performAction(const QString& workshopName, const QString&
                 QStringLiteral("/v1/projects/%1/workshops").arg(projectId),
                 QJsonDocument(req).toJson(QJsonDocument::Compact), QStringLiteral("POST"), this,
                 [this, projectPath, workshopName, action](const QJsonDocument& resp) {
-                    if (!ProjectSelectionGuard::selectionMatches(projectPath,
-                                                                 m_projectCombo->currentData().toString())) {
-                        clearTransitionState(workshopName);
+                    if (!ProjectSelectionGuard::selectionMatches(projectPath, m_lastProjectPath)) {
                         return;
                     }
 
@@ -791,9 +781,7 @@ void WorkshopToolView::performAction(const QString& workshopName, const QString&
                     WorkshopApi::queryAsync(
                         QStringLiteral("/v1/changes/%1/wait").arg(changeId), this,
                         [this, projectPath, workshopName, action](const QJsonDocument& waitResp) {
-                            if (!ProjectSelectionGuard::selectionMatches(projectPath,
-                                                                         m_projectCombo->currentData().toString())) {
-                                clearTransitionState(workshopName);
+                            if (!ProjectSelectionGuard::selectionMatches(projectPath, m_lastProjectPath)) {
                                 return;
                             }
 
