@@ -1,4 +1,5 @@
 #include "workshopapi.h"
+#include "debug.h"
 #include <QLocalSocket>
 #include <KSharedConfig>
 #include <KConfigGroup>
@@ -22,6 +23,7 @@ QJsonDocument query(const QString& path, const QByteArray& postData, const QStri
     socket.connectToServer(socketPath);
     // 15 seconds connection timeout to allow systemd to spin up the socket-activated daemon
     if (!socket.waitForConnected(15000)) {
+        qCWarning(PLUGIN_KDEVELOP_WORKSHOP) << "Failed to connect to socket:" << socketPath;
         return {};
     }
 
@@ -55,11 +57,40 @@ QJsonDocument query(const QString& path, const QByteArray& postData, const QStri
 
     int headerEnd = responseData.indexOf("\r\n\r\n");
     if (headerEnd == -1) {
+        qCWarning(PLUGIN_KDEVELOP_WORKSHOP) << "No HTTP header terminator in response for" << method << path;
         return {};
     }
 
+    QByteArray headers = responseData.left(headerEnd);
     QByteArray body = responseData.mid(headerEnd + 4);
-    return QJsonDocument::fromJson(body);
+
+    qCDebug(PLUGIN_KDEVELOP_WORKSHOP) << method << path << "→ headers:" << headers.left(200);
+
+    // Decode chunked transfer encoding when the server uses it
+    if (headers.toLower().contains("transfer-encoding: chunked")) {
+        QByteArray decoded;
+        int pos = 0;
+        while (pos < body.size()) {
+            int lineEnd = body.indexOf("\r\n", pos);
+            if (lineEnd == -1)
+                break;
+            bool ok = false;
+            int chunkSize = body.mid(pos, lineEnd - pos).toInt(&ok, 16);
+            if (!ok || chunkSize == 0)
+                break;
+            pos = lineEnd + 2;
+            decoded.append(body.mid(pos, chunkSize));
+            pos += chunkSize + 2; // skip chunk data + trailing \r\n
+        }
+        body = decoded;
+    }
+
+    auto result = QJsonDocument::fromJson(body);
+    if (result.isNull()) {
+        qCWarning(PLUGIN_KDEVELOP_WORKSHOP)
+            << "Failed to parse JSON body for" << method << path << "- body prefix:" << body.left(120);
+    }
+    return result;
 }
 
 }
