@@ -288,11 +288,11 @@ void WorkshopToolView::onProjectChanged(int index)
 
                 if (!success) {
                     clearLayout();
-                    m_workshopsLayout->insertWidget(
-                        0,
-                        new QLabel(errorMessage.isEmpty() ? QStringLiteral("Failed to retrieve workshops list.")
-                                                          : errorMessage,
-                                   m_workshopsContainer));
+                    auto* errorLabel = new QLabel(
+                        errorMessage.isEmpty() ? QStringLiteral("Failed to retrieve workshops list.") : errorMessage,
+                        m_workshopsContainer);
+                    errorLabel->setTextFormat(Qt::PlainText);
+                    m_workshopsLayout->insertWidget(0, errorLabel);
                     m_animationTimer->stop();
                     m_pollTimer->stop();
                     return;
