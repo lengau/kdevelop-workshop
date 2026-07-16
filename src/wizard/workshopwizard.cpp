@@ -15,7 +15,6 @@
 #include <QDir>
 #include <QFile>
 #include <QTextStream>
-#include <QThread>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -269,75 +268,56 @@ void SdkPage::performSearch()
     m_searchResultsList->addItem(QStringLiteral("Searching..."));
     m_searchResultsList->blockSignals(false);
 
-    auto* thread = QThread::create([this, queryText]() {
-        QJsonDocument doc = WorkshopApi::query(QStringLiteral("/v1/find?q=%1").arg(queryText));
+    WorkshopApi::queryAsync(QStringLiteral("/v1/find?q=%1").arg(queryText), this, [this](const QJsonDocument& doc) {
+        m_searchBtn->setEnabled(true);
 
         QJsonArray results;
         if (!doc.isEmpty()) {
             results = doc.object().value(QStringLiteral("result")).toArray();
         }
 
-        QMetaObject::invokeMethod(
-            this,
-            [this, results]() {
-                m_searchBtn->setEnabled(true);
+        m_searchResultsList->blockSignals(true);
+        m_searchResultsList->clear();
+        m_searchSdkMap.clear();
 
-                m_searchResultsList->blockSignals(true);
-                m_searchResultsList->clear();
-                m_searchSdkMap.clear();
+        QStringList returnedNames;
 
-                QStringList returnedNames;
+        for (const QJsonValue& val : results) {
+            QJsonObject sdk = val.toObject();
+            QString name = sdk.value(QStringLiteral("name")).toString();
+            QString summary = sdk.value(QStringLiteral("summary")).toString();
 
-                // Populate matched results
-                for (const QJsonValue& val : results) {
-                    QJsonObject sdk = val.toObject();
-                    QString name = sdk.value(QStringLiteral("name")).toString();
-                    QString summary = sdk.value(QStringLiteral("summary")).toString();
+            returnedNames << name;
+            m_sdkSummaries.insert(name, summary);
 
-                    returnedNames << name;
-                    m_sdkSummaries.insert(name, summary);
+            QString labelText = QStringLiteral("%1 (%2)").arg(name).arg(summary);
+            auto* item = new QListWidgetItem(labelText, m_searchResultsList);
+            item->setFlags(item->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
 
-                    QString labelText = QStringLiteral("%1 (%2)").arg(name).arg(summary);
-                    auto* item = new QListWidgetItem(labelText, m_searchResultsList);
-                    item->setFlags(item->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+            m_searchSdkMap.insert(labelText, name);
+            item->setCheckState(m_selectedStoreSdks.contains(name) ? Qt::Checked : Qt::Unchecked);
+        }
 
-                    m_searchSdkMap.insert(labelText, name);
+        m_lastSearchResults = returnedNames;
 
-                    if (m_selectedStoreSdks.contains(name)) {
-                        item->setCheckState(Qt::Checked);
-                    } else {
-                        item->setCheckState(Qt::Unchecked);
-                    }
-                }
+        for (const QString& name : m_selectedStoreSdks) {
+            if (!returnedNames.contains(name)) {
+                QString summary = m_sdkSummaries.value(name, QStringLiteral("Selected SDK"));
+                QString labelText = QStringLiteral("%1 (%2)").arg(name).arg(summary);
 
-                m_lastSearchResults = returnedNames;
+                auto* item = new QListWidgetItem(labelText, m_searchResultsList);
+                item->setFlags(item->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+                item->setCheckState(Qt::Checked);
+                m_searchSdkMap.insert(labelText, name);
+            }
+        }
 
-                // Append previously selected items that didn't match the new search results
-                for (const QString& name : m_selectedStoreSdks) {
-                    if (!returnedNames.contains(name)) {
-                        QString summary = m_sdkSummaries.value(name, QStringLiteral("Selected SDK"));
-                        QString labelText = QStringLiteral("%1 (%2)").arg(name).arg(summary);
+        if (m_searchResultsList->count() == 0) {
+            m_searchResultsList->addItem(QStringLiteral("No matching SDKs found."));
+        }
 
-                        auto* item = new QListWidgetItem(labelText, m_searchResultsList);
-                        item->setFlags(item->flags() | Qt::ItemIsUserCheckable | Qt::ItemIsEnabled
-                                       | Qt::ItemIsSelectable);
-                        item->setCheckState(Qt::Checked);
-
-                        m_searchSdkMap.insert(labelText, name);
-                    }
-                }
-
-                if (m_searchResultsList->count() == 0) {
-                    m_searchResultsList->addItem(QStringLiteral("No matching SDKs found."));
-                }
-
-                m_searchResultsList->blockSignals(false);
-            },
-            Qt::QueuedConnection);
+        m_searchResultsList->blockSignals(false);
     });
-
-    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
-    thread->start();
 }
 
 // ReviewPage implementation
@@ -365,6 +345,10 @@ void ReviewPage::initializePage()
 
 bool ReviewPage::validatePage()
 {
+    if (m_validating) {
+        return false;
+    }
+
     QString name = m_wizard->workshopName();
     if (name.isEmpty())
         name = QStringLiteral("dev");
@@ -396,45 +380,71 @@ bool ReviewPage::validatePage()
     out << m_previewEdit->toPlainText();
     file.close();
 
-    // Register project path with workshopd API
+    m_validating = true;
+    if (auto* wiz = wizard()) {
+        wiz->setEnabled(false);
+    }
+
+    auto rollback = [this, existingConfigBackup, yamlFilePath]() {
+        QFile rollbackFile(yamlFilePath);
+        if (!existingConfigBackup.isEmpty()) {
+            if (rollbackFile.open(QIODevice::WriteOnly)) {
+                rollbackFile.write(existingConfigBackup);
+                rollbackFile.close();
+            }
+        } else {
+            rollbackFile.remove();
+        }
+        m_validating = false;
+        if (auto* wiz = wizard()) {
+            wiz->setEnabled(true);
+        }
+    };
+
     QJsonObject req;
     req.insert(QStringLiteral("path"), m_projectPath);
-    QJsonDocument reqDoc(req);
-
-    QJsonDocument projDoc = WorkshopApi::query(QStringLiteral("/v1/projects"), reqDoc.toJson(QJsonDocument::Compact),
-                                               QStringLiteral("POST"));
-
-    QString projectId;
-    if (!projDoc.isEmpty()) {
-        projectId = projDoc.object().value(QStringLiteral("result")).toObject().value(QStringLiteral("id")).toString();
-    }
-
-    // Validate the newly written file against the daemon
-    if (!projectId.isEmpty()) {
-        QJsonDocument workshopsDoc = WorkshopApi::query(QStringLiteral("/v1/projects/%1/workshops").arg(projectId));
-        if (!workshopsDoc.isEmpty()) {
-            QJsonObject respObj = workshopsDoc.object();
-            if (respObj.value(QStringLiteral("type")).toString() == QLatin1String("error")) {
-                QString errMsg =
-                    respObj.value(QStringLiteral("result")).toObject().value(QStringLiteral("message")).toString();
-
-                KMessageBox::error(this, i18n("The workshop configuration is invalid:\n\n%1", errMsg),
-                                   i18n("Validation Error"));
-
-                // Rollback file changes on validation failure
-                if (!existingConfigBackup.isEmpty()) {
-                    if (file.open(QIODevice::WriteOnly)) {
-                        file.write(existingConfigBackup);
-                        file.close();
-                    }
-                } else {
-                    file.remove();
-                }
-
-                return false;
+    WorkshopApi::queryAsync(
+        QStringLiteral("/v1/projects"), QJsonDocument(req).toJson(QJsonDocument::Compact), QStringLiteral("POST"), this,
+        [this, rollback](const QJsonDocument& projDoc) {
+            QString projectId;
+            if (!projDoc.isEmpty()) {
+                projectId =
+                    projDoc.object().value(QStringLiteral("result")).toObject().value(QStringLiteral("id")).toString();
             }
-        }
-    }
 
-    return true;
+            if (projectId.isEmpty()) {
+                m_validating = false;
+                if (auto* wiz = wizard()) {
+                    wiz->setEnabled(true);
+                    wiz->accept();
+                }
+                return;
+            }
+
+            WorkshopApi::queryAsync(
+                QStringLiteral("/v1/projects/%1/workshops").arg(projectId), this,
+                [this, rollback](const QJsonDocument& workshopsDoc) {
+                    if (!workshopsDoc.isEmpty()) {
+                        const QJsonObject respObj = workshopsDoc.object();
+                        if (respObj.value(QStringLiteral("type")).toString() == QLatin1String("error")) {
+                            const QString errMsg = respObj.value(QStringLiteral("result"))
+                                                       .toObject()
+                                                       .value(QStringLiteral("message"))
+                                                       .toString();
+                            KMessageBox::error(this, i18n("The workshop configuration is invalid:\n\n%1", errMsg),
+                                               i18n("Validation Error"));
+                            rollback();
+                            return;
+                        }
+                    }
+
+                    m_validating = false;
+                    if (auto* wiz = wizard()) {
+                        wiz->setEnabled(true);
+                        wiz->accept();
+                    }
+                });
+        });
+
+    return false;
 }
