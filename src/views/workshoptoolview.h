@@ -36,6 +36,8 @@ private Q_SLOTS:
 
 private:
     void clearLayout();
+    void clearTransitionState(const QString& workshopName);
+    void clearAllTransitionState();
 
     kdevelop_workshop* m_plugin;
     QTextEdit* m_output;
@@ -50,6 +52,7 @@ private:
         m_transitioningWorkshops; // name -> action/status ("Starting", "Stopping", "Removing", "Pending", etc.)
     QMap<QString, WorkshopWidgets> m_workshopWidgets; // name -> pointers
     QString m_projectId;
+    QString m_lastProjectPath;
 };
 
 #endif // WORKSHOPTOOLVIEW_H
