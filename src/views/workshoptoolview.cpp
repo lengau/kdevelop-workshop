@@ -199,6 +199,7 @@ void WorkshopToolView::onProjectChanged(int index)
     if (index < 0 || m_projectCombo->count() == 0) {
         clearAllTransitionState();
         m_lastProjectPath.clear();
+        m_projectId.clear();
         clearLayout();
         m_workshopsLayout->insertWidget(0, new QLabel(QStringLiteral("No open projects."), m_workshopsContainer));
         m_refreshing = false;
@@ -209,6 +210,7 @@ void WorkshopToolView::onProjectChanged(int index)
     if (m_lastProjectPath != projectPath) {
         clearAllTransitionState();
         m_lastProjectPath = projectPath;
+        m_projectId.clear();
     }
 
     // Only display the connecting loader if there is currently no list rendered (avoids flickering on updates)
@@ -222,6 +224,7 @@ void WorkshopToolView::onProjectChanged(int index)
 
     WorkshopApi::queryAsync(QStringLiteral("/v1/projects"), this, [this, projectPath](const QJsonDocument& doc) {
         if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
+            m_refreshing = false;
             return;
         }
 
@@ -259,6 +262,7 @@ void WorkshopToolView::onProjectChanged(int index)
             QStringLiteral("/v1/projects/%1/workshops").arg(projectId), this,
             [this, projectPath, projectId](const QJsonDocument& workshopsDoc) {
                 if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
+                    m_refreshing = false;
                     return;
                 }
 
