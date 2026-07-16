@@ -7,7 +7,7 @@ Build-Depends: debhelper-compat (= 13),
                extra-cmake-modules,
                pkg-kde-tools,
                libyaml-cpp-dev,
-               qt6-base-dev,
+               qt6-base-dev (>= 6.9.0),
                libkf6i18n-dev,
                libkf6parts-dev,
                kdevelop-dev
