@@ -1,0 +1,23 @@
+Source: kdevelop-workshop
+Section: devel
+Priority: optional
+Maintainer: Alex M. Lowe <alex.lowe@canonical.com>
+Build-Depends: debhelper-compat (= 13),
+               cmake,
+               extra-cmake-modules,
+               qt6-base-dev,
+               libkf6i18n-dev,
+               libkf6parts-dev,
+               kdevelop-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/lengau/kdevelop-workshop
+
+Package: kdevelop-workshop
+Architecture: any
+Depends: kdevelop,
+         ${shlibs:Depends},
+         ${misc:Depends}
+Description: Workshop plugin for KDevelop
+ This plugin provides integration for canonical workshops inside KDevelop,
+ including sidebar tool views, embedded shell terminal, custom project
+ runtimes, and a graphical sketch SDK manager.
