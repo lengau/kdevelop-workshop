@@ -64,7 +64,28 @@ void TestParseSketchSdk::parsesSketchBlock()
 
 void TestParseSketchSdk::parsesSketchBlockMapVariant()
 {
-    verifyParsedSketch(parseSketchSdkMap);
+    const QStringList input = {
+        QStringLiteral("hooks:"),
+        QStringLiteral("  setup-base: |"),
+        QStringLiteral("    apt-get update"),
+        QStringLiteral("    apt-get install build-essential"),
+        QStringLiteral("  setup-project: uv sync"),
+        QStringLiteral("plugs:"),
+        QStringLiteral("  editor:"),
+        QStringLiteral("    interface: 'mount'"),
+        QStringLiteral("    workshop-target: \"project-editor\""),
+        QStringLiteral("slots:"),
+        QStringLiteral("  server:"),
+        QStringLiteral("    interface: \"tunnel\""),
+        QStringLiteral("    endpoint: 9000"),
+    };
+
+    const SketchSdkData data = parseSketchSdkMap(input);
+
+    QCOMPARE(data.setupBase, QStringLiteral("apt-get update\napt-get install build-essential"));
+    QCOMPARE(data.setupProject, QStringLiteral("uv sync"));
+    QCOMPARE(data.plugs.size(), 1);
+    QCOMPARE(data.slots.size(), 1);
 }
 
 void TestParseSketchSdk::serializesSketchData()
