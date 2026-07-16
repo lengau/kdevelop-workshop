@@ -74,11 +74,21 @@ QJsonDocument query(const QString& path, const QByteArray& postData, const QStri
             int lineEnd = body.indexOf("\r\n", pos);
             if (lineEnd == -1)
                 break;
+            QByteArray sizeLine = body.mid(pos, lineEnd - pos);
+            // Strip chunk extensions (e.g. "fa1;ext=value" → "fa1")
+            int semiColon = sizeLine.indexOf(';');
+            if (semiColon != -1)
+                sizeLine = sizeLine.left(semiColon);
             bool ok = false;
-            int chunkSize = body.mid(pos, lineEnd - pos).toInt(&ok, 16);
-            if (!ok || chunkSize == 0)
+            int chunkSize = sizeLine.trimmed().toInt(&ok, 16);
+            if (!ok || chunkSize < 0)
+                break;
+            if (chunkSize == 0)
                 break;
             pos = lineEnd + 2;
+            // Guard against truncated responses
+            if (pos + chunkSize > body.size())
+                break;
             decoded.append(body.mid(pos, chunkSize));
             pos += chunkSize + 2; // skip chunk data + trailing \r\n
         }
