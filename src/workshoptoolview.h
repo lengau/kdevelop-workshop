@@ -13,7 +13,8 @@ class QLabel;
 class QPushButton;
 class QTimer;
 
-struct WorkshopWidgets {
+struct WorkshopWidgets
+{
     QLabel* statusLabel;
     QPushButton* actionBtn;
 };
@@ -41,12 +42,13 @@ private:
     QComboBox* m_projectCombo;
     QWidget* m_workshopsContainer;
     QVBoxLayout* m_workshopsLayout;
-    
+
     QTimer* m_animationTimer;
     QTimer* m_pollTimer;
     bool m_refreshing;
-    QMap<QString, QString> m_transitioningWorkshops; // name -> action/status ("Starting", "Stopping", "Removing", "Pending", etc.)
-    QMap<QString, WorkshopWidgets> m_workshopWidgets;  // name -> pointers
+    QMap<QString, QString>
+        m_transitioningWorkshops; // name -> action/status ("Starting", "Stopping", "Removing", "Pending", etc.)
+    QMap<QString, WorkshopWidgets> m_workshopWidgets; // name -> pointers
     QString m_projectId;
 };
 

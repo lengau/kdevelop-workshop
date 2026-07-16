@@ -9,7 +9,7 @@ class QPushButton;
 class QVBoxLayout;
 
 namespace KParts {
-    class ReadOnlyPart;
+class ReadOnlyPart;
 }
 
 class WorkshopTerminalToolView : public QWidget

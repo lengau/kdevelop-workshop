@@ -17,15 +17,25 @@ class WorkshopWizard : public QWizard
 {
     Q_OBJECT
 public:
-    explicit WorkshopWizard(const QString& projectPath, const QString& existingName = QString(), QWidget* parent = nullptr);
+    explicit WorkshopWizard(const QString& projectPath, const QString& existingName = QString(),
+                            QWidget* parent = nullptr);
 
     QString workshopName() const;
     QString baseImage() const;
     QStringList selectedSdks() const;
 
-    QString existingName() const { return m_existingName; }
-    QString existingBase() const { return m_existingBase; }
-    QStringList existingSdks() const { return m_existingSdks; }
+    QString existingName() const
+    {
+        return m_existingName;
+    }
+    QString existingBase() const
+    {
+        return m_existingBase;
+    }
+    QStringList existingSdks() const
+    {
+        return m_existingSdks;
+    }
 
 private:
     void parseExistingYaml();
@@ -56,9 +66,9 @@ public:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
     QStringList m_selectedStoreSdks;
-    QMap<QString, QString> m_searchSdkMap;      // display text -> name
-    QMap<QString, QString> m_sdkSummaries;       // name -> summary
-    QStringList m_lastSearchResults;             // names matching the last search query
+    QMap<QString, QString> m_searchSdkMap; // display text -> name
+    QMap<QString, QString> m_sdkSummaries; // name -> summary
+    QStringList m_lastSearchResults; // names matching the last search query
 
 private Q_SLOTS:
     void performSearch();

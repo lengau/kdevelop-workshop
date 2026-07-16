@@ -1,0 +1,8 @@
+# Markdownlint configuration file
+default: true
+
+# Line length - disabled as it is common to write paragraphs on a single line
+MD013: false
+
+# Trailing punctuation in headings - disabled to allow colons (e.g. "Practices:")
+MD026: false

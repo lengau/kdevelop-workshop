@@ -6,7 +6,8 @@
 #include <QByteArray>
 
 namespace WorkshopApi {
-    QJsonDocument query(const QString& path, const QByteArray& postData = QByteArray(), const QString& method = QStringLiteral("GET"));
+QJsonDocument query(const QString& path, const QByteArray& postData = QByteArray(),
+                    const QString& method = QStringLiteral("GET"));
 }
 
 #endif // WORKSHOPAPI_H

@@ -4,13 +4,16 @@
 #include <QMap>
 #include <QString>
 
-struct SketchSdkData {
-    struct Plug {
+struct SketchSdkData
+{
+    struct Plug
+    {
         QString interfaceName = QStringLiteral("mount");
         QString workshopTarget;
     };
 
-    struct Slot {
+    struct Slot
+    {
         QString interfaceName = QStringLiteral("tunnel");
         int endpoint = 8080;
     };

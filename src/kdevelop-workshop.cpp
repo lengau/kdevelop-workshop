@@ -26,18 +26,30 @@
 class WorkshopToolViewFactory : public KDevelop::IToolViewFactory
 {
 public:
-    explicit WorkshopToolViewFactory(kdevelop_workshop* plugin) : m_plugin(plugin) {}
-    QWidget* create(QWidget *parent = nullptr) override {
+    explicit WorkshopToolViewFactory(kdevelop_workshop* plugin)
+        : m_plugin(plugin)
+    {
+    }
+    QWidget* create(QWidget* parent = nullptr) override
+    {
         qWarning() << "=================> WorkshopToolViewFactory::create called! <=================";
         return new WorkshopToolView(m_plugin, parent);
     }
-    QString id() const override { return QStringLiteral("org.kdevelop.WorkshopToolView"); }
-    Qt::DockWidgetArea defaultPosition() const override { return Qt::RightDockWidgetArea; }
-    void viewCreated(Sublime::View* view) override {
+    QString id() const override
+    {
+        return QStringLiteral("org.kdevelop.WorkshopToolView");
+    }
+    Qt::DockWidgetArea defaultPosition() const override
+    {
+        return Qt::RightDockWidgetArea;
+    }
+    void viewCreated(Sublime::View* view) override
+    {
         if (view && view->document()) {
             view->document()->setStatusIcon(QIcon::fromTheme(QStringLiteral("services")));
         }
     }
+
 private:
     kdevelop_workshop* m_plugin;
 };
@@ -45,18 +57,30 @@ private:
 class WorkshopTerminalToolViewFactory : public KDevelop::IToolViewFactory
 {
 public:
-    explicit WorkshopTerminalToolViewFactory(kdevelop_workshop* plugin) : m_plugin(plugin) {}
-    QWidget* create(QWidget *parent = nullptr) override {
+    explicit WorkshopTerminalToolViewFactory(kdevelop_workshop* plugin)
+        : m_plugin(plugin)
+    {
+    }
+    QWidget* create(QWidget* parent = nullptr) override
+    {
         qWarning() << "=================> WorkshopTerminalToolViewFactory::create called! <=================";
         return new WorkshopTerminalToolView(m_plugin, parent);
     }
-    QString id() const override { return QStringLiteral("org.kdevelop.WorkshopTerminalToolView"); }
-    Qt::DockWidgetArea defaultPosition() const override { return Qt::BottomDockWidgetArea; }
-    void viewCreated(Sublime::View* view) override {
+    QString id() const override
+    {
+        return QStringLiteral("org.kdevelop.WorkshopTerminalToolView");
+    }
+    Qt::DockWidgetArea defaultPosition() const override
+    {
+        return Qt::BottomDockWidgetArea;
+    }
+    void viewCreated(Sublime::View* view) override
+    {
         if (view && view->document()) {
             view->document()->setStatusIcon(QIcon::fromTheme(QStringLiteral("utilities-terminal")));
         }
     }
+
 private:
     kdevelop_workshop* m_plugin;
 };
@@ -70,17 +94,19 @@ kdevelop_workshop::kdevelop_workshop(QObject* parent, const KPluginMetaData& met
 
     qWarning() << "=================> Workshop plugin constructor called! <=================";
 
-    connect(KDevelop::ICore::self()->projectController(), &KDevelop::IProjectController::projectOpened,
-            this, &kdevelop_workshop::projectOpened);
+    connect(KDevelop::ICore::self()->projectController(), &KDevelop::IProjectController::projectOpened, this,
+            &kdevelop_workshop::projectOpened);
 
     QTimer::singleShot(0, this, [this]() {
         qWarning() << "=================> Registering Workshop ToolView <=================";
         m_factory = new WorkshopToolViewFactory(this);
-        KDevelop::ICore::self()->uiController()->addToolView(QStringLiteral("Workshop"), m_factory, KDevelop::IUiController::CreateAndRaise);
+        KDevelop::ICore::self()->uiController()->addToolView(QStringLiteral("Workshop"), m_factory,
+                                                             KDevelop::IUiController::CreateAndRaise);
 
         qWarning() << "=================> Registering Workshop Terminal ToolView <=================";
         m_terminalFactory = new WorkshopTerminalToolViewFactory(this);
-        KDevelop::ICore::self()->uiController()->addToolView(QStringLiteral("Workshop Terminal"), m_terminalFactory, KDevelop::IUiController::CreateAndRaise);
+        KDevelop::ICore::self()->uiController()->addToolView(QStringLiteral("Workshop Terminal"), m_terminalFactory,
+                                                             KDevelop::IUiController::CreateAndRaise);
     });
 
     const auto projects = KDevelop::ICore::self()->projectController()->projects();
@@ -136,8 +162,9 @@ void kdevelop_workshop::addWorkshopsForProject(KDevelop::IProject* project)
                 QJsonObject req;
                 req.insert(QStringLiteral("path"), projectPath);
                 QJsonDocument reqDoc(req);
-                QJsonDocument regDoc = WorkshopApi::query(QStringLiteral("/v1/projects"), reqDoc.toJson(QJsonDocument::Compact), QStringLiteral("POST"));
-                
+                QJsonDocument regDoc = WorkshopApi::query(
+                    QStringLiteral("/v1/projects"), reqDoc.toJson(QJsonDocument::Compact), QStringLiteral("POST"));
+
                 // Re-query projects list to get the newly generated project ID
                 if (!regDoc.isEmpty()) {
                     QJsonDocument newProjectsDoc = WorkshopApi::query(QStringLiteral("/v1/projects"));
@@ -155,15 +182,17 @@ void kdevelop_workshop::addWorkshopsForProject(KDevelop::IProject* project)
             }
         }
 
-        if (projectId.isEmpty()) return;
+        if (projectId.isEmpty())
+            return;
 
         QJsonDocument workshopsDoc = WorkshopApi::query(QStringLiteral("/v1/projects/%1/workshops").arg(projectId));
-        if (workshopsDoc.isEmpty()) return;
+        if (workshopsDoc.isEmpty())
+            return;
 
         QJsonObject result = workshopsDoc.object().value(QStringLiteral("result")).toObject();
         QJsonArray workshops = result.value(QStringLiteral("workshops")).toArray();
         QJsonArray files = result.value(QStringLiteral("files")).toArray();
-        
+
         // Deduplicate and collect workshop names from both running instances and file declarations
         QStringList workshopNames;
         for (const QJsonValue& val : workshops) {
@@ -182,22 +211,26 @@ void kdevelop_workshop::addWorkshopsForProject(KDevelop::IProject* project)
         }
 
         // Return to the main thread to register the runtimes safely
-        QMetaObject::invokeMethod(this, [this, projectPath, workshopNames]() {
-            for (const QString& name : workshopNames) {
-                // Ensure we don't register duplicate runtimes if they're already present
-                bool alreadyExists = false;
-                const auto runtimes = KDevelop::ICore::self()->runtimeController()->availableRuntimes();
-                for (auto* rt : runtimes) {
-                    if (rt->name() == QStringLiteral("Workshop: %1").arg(name)) {
-                        alreadyExists = true;
-                        break;
+        QMetaObject::invokeMethod(
+            this,
+            [this, projectPath, workshopNames]() {
+                for (const QString& name : workshopNames) {
+                    // Ensure we don't register duplicate runtimes if they're already present
+                    bool alreadyExists = false;
+                    const auto runtimes = KDevelop::ICore::self()->runtimeController()->availableRuntimes();
+                    for (auto* rt : runtimes) {
+                        if (rt->name() == QStringLiteral("Workshop: %1").arg(name)) {
+                            alreadyExists = true;
+                            break;
+                        }
+                    }
+                    if (!alreadyExists) {
+                        KDevelop::ICore::self()->runtimeController()->addRuntimes(
+                            new WorkshopRuntime(name, projectPath, this));
                     }
                 }
-                if (!alreadyExists) {
-                    KDevelop::ICore::self()->runtimeController()->addRuntimes(new WorkshopRuntime(name, projectPath, this));
-                }
-            }
-        }, Qt::QueuedConnection);
+            },
+            Qt::QueuedConnection);
     });
 
     connect(thread, &QThread::finished, thread, &QThread::deleteLater);
