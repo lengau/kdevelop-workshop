@@ -350,6 +350,14 @@ void WorkshopToolView::onProjectChanged(int index)
                     }
                 }
 
+                for (auto it = m_transitioningWorkshops.begin(); it != m_transitioningWorkshops.end();) {
+                    if (!workshopMap.contains(it.key())) {
+                        it = m_transitioningWorkshops.erase(it);
+                    } else {
+                        ++it;
+                    }
+                }
+
                 int insertIdx = 0;
                 for (auto it = workshopMap.begin(); it != workshopMap.end(); ++it) {
                     QJsonObject ws = it.value();
