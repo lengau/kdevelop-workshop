@@ -27,21 +27,7 @@ The plugin is packaged using standard Debian/Ubuntu conventions under the `debia
 
 ---
 
-## 3. GitHub Actions Workflow (`.github/workflows/package.yaml`)
-
-A complete continuous integration workflow is configured to compile, package, and test-install the plugin.
-
-### High-Level Workflow
-
-- **Triggers**: Runs automatically on pull requests and pushes to the `main` branch.
-- **Concurrency**: Automatically cancels older in-progress runs when new code is pushed.
-- **Environments**: Builds and tests the plugin on both `amd64` and `arm64` runners using an `ubuntu:26.10` container.
-- **Dependencies & Caching**: Efficiently installs build dependencies (`pkg-kde-tools`, KF6/KDevelop) and caches APT packages across runs to speed up compilation.
-- **Artifacts**: Uploads the resulting `.deb` packages as workflow artifacts.
-
----
-
-## 4. Practices & Processes
+## 3. Practices & Processes
 
 ### Practices
 
@@ -68,13 +54,18 @@ When writing C++ code for the KDevelop plugin, adhere to the upstream KDevelop `
 
 ### Processes
 
+- **Branch Hygiene**: Do active work on a dedicated branch created from the current `origin/main`
+  state. Work branches must start with `work/`. Keep `main` clean, rebase the work branch onto
+  `origin/main` before opening or updating a PR, and delete the branch locally and remotely after
+  merge. If you need to switch back to `main` during a task, stash or commit the work first so
+  uncommitted changes do not carry over onto the new branch.
 - **Conventional Commits**: Commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) and be no longer than 80 characters. Use the following types:
   - `ci`, `build`, `feat`, `fix`, `perf`, `refactor`, `style`, `test`, `docs`, `chore`
 - **Verification**: Always verify building, formatting, and installation tests locally or check GitHub Actions run results before concluding a task.
 
 ---
 
-## 5. Upstream KDE & KDevelop Guidelines
+## 4. Upstream KDE & KDevelop Guidelines
 
 If the time comes to upstream your work to the main KDevelop codebase, follow the official community guidelines:
 
