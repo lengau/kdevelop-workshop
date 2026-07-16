@@ -20,7 +20,7 @@ WorkshopConfigPage::WorkshopConfigPage(KDevelop::IPlugin* plugin, QWidget* paren
 
     m_socketPathEdit = new QLineEdit(this);
     m_socketPathEdit->setObjectName(QStringLiteral("kcfg_SocketPath"));
-    m_socketPathEdit->setPlaceholderText(QStringLiteral("/var/snap/workshop/common/workshop/workshop.socket"));
+    m_socketPathEdit->setPlaceholderText(WorkshopSettings::defaultSocketPathValue());
     formLayout->addWidget(m_socketPathEdit);
 
     layout->addLayout(formLayout);

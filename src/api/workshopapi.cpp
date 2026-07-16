@@ -13,7 +13,7 @@ QJsonDocument query(const QString& path, const QByteArray& postData, const QStri
 {
     QString socketPath = WorkshopSettings::self()->socketPath().trimmed();
     if (socketPath.isEmpty())
-        socketPath = QStringLiteral("/var/snap/workshop/common/workshop/workshop.socket");
+        socketPath = WorkshopSettings::defaultSocketPathValue();
 
     QNetworkAccessManager nam;
     QNetworkRequest request(QUrl(QStringLiteral("unix+http://localhost") + path));
