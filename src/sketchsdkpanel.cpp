@@ -28,9 +28,8 @@
 #include <QRegularExpression>
 #include <KLocalizedString>
 
-namespace
-{
-QString safeErrorOutput(const QString &stdErr, const QString &stdOut)
+namespace {
+QString safeErrorOutput(const QString& stdErr, const QString& stdOut)
 {
     if (!stdErr.trimmed().isEmpty()) {
         return stdErr.trimmed();
@@ -43,15 +42,15 @@ QString safeErrorOutput(const QString &stdErr, const QString &stdOut)
     return {};
 }
 
-bool isValidName(const QString &name)
+bool isValidName(const QString& name)
 {
     static QRegularExpression re(QStringLiteral("^[a-z][a-z0-9-]*$"));
     return re.match(name).hasMatch();
 }
 } // namespace
 
-SketchSdkPanel::SketchSdkPanel(const QString &workshopName, const QString &projectPath,
-                               const QString &workshopStatus, QWidget *parent)
+SketchSdkPanel::SketchSdkPanel(const QString& workshopName, const QString& projectPath, const QString& workshopStatus,
+                               QWidget* parent)
     : QDialog(parent)
     , m_workshopName(workshopName)
     , m_projectPath(projectPath)
@@ -60,8 +59,8 @@ SketchSdkPanel::SketchSdkPanel(const QString &workshopName, const QString &proje
     setupUi();
 }
 
-SketchSdkPanel::SketchSdkPanel(const QString &workshopName, const QString &projectPath,
-                               const QString &workshopStatus, const SketchSdkData &prefillData, QWidget *parent)
+SketchSdkPanel::SketchSdkPanel(const QString& workshopName, const QString& projectPath, const QString& workshopStatus,
+                               const SketchSdkData& prefillData, QWidget* parent)
     : QDialog(parent)
     , m_workshopName(workshopName)
     , m_projectPath(projectPath)
@@ -82,8 +81,7 @@ SketchSdkPanel::~SketchSdkPanel()
 void SketchSdkPanel::reject()
 {
     if (m_process) {
-        QMessageBox::information(this,
-                                 i18n("Please wait for the current workshop command to finish."),
+        QMessageBox::information(this, i18n("Please wait for the current workshop command to finish."),
                                  i18n("Operation in Progress"));
         return;
     }
@@ -97,21 +95,20 @@ void SketchSdkPanel::setupUi()
     setModal(true);
     resize(900, 700);
 
-    auto *layout = new QVBoxLayout(this);
+    auto* layout = new QVBoxLayout(this);
 
-    auto *titleLabel =
-        new QLabel(i18n("Configure the sketch SDK for workshop \"%1\".", m_workshopName), this);
+    auto* titleLabel = new QLabel(i18n("Configure the sketch SDK for workshop \"%1\".", m_workshopName), this);
     titleLabel->setWordWrap(true);
     layout->addWidget(titleLabel);
 
     m_editorWidget = new QWidget(this);
-    auto *editorLayout = new QVBoxLayout(m_editorWidget);
+    auto* editorLayout = new QVBoxLayout(m_editorWidget);
     editorLayout->setContentsMargins(0, 0, 0, 0);
 
     const QFont fixedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
 
-    auto *hooksGroup = new QGroupBox(i18n("Hooks"), m_editorWidget);
-    auto *hooksLayout = new QFormLayout(hooksGroup);
+    auto* hooksGroup = new QGroupBox(i18n("Hooks"), m_editorWidget);
+    auto* hooksLayout = new QFormLayout(hooksGroup);
 
     m_setupBaseEdit = new QPlainTextEdit(hooksGroup);
     m_setupBaseEdit->setFont(fixedFont);
@@ -127,12 +124,11 @@ void SketchSdkPanel::setupUi()
 
     editorLayout->addWidget(hooksGroup);
 
-    auto *plugsGroup = new QGroupBox(i18n("Plugs"), m_editorWidget);
-    auto *plugsLayout = new QVBoxLayout(plugsGroup);
+    auto* plugsGroup = new QGroupBox(i18n("Plugs"), m_editorWidget);
+    auto* plugsLayout = new QVBoxLayout(plugsGroup);
 
     m_plugsTable = new QTableWidget(0, 3, plugsGroup);
-    m_plugsTable->setHorizontalHeaderLabels(
-        {i18n("Name"), i18n("Interface"), i18n("Workshop Target")});
+    m_plugsTable->setHorizontalHeaderLabels({i18n("Name"), i18n("Interface"), i18n("Workshop Target")});
     m_plugsTable->horizontalHeader()->setStretchLastSection(true);
     m_plugsTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     m_plugsTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
@@ -140,7 +136,7 @@ void SketchSdkPanel::setupUi()
     m_plugsTable->setSelectionMode(QAbstractItemView::SingleSelection);
     plugsLayout->addWidget(m_plugsTable);
 
-    auto *plugButtonLayout = new QHBoxLayout();
+    auto* plugButtonLayout = new QHBoxLayout();
     plugButtonLayout->addStretch();
     m_addPlugButton = new QPushButton(i18n("Add"), plugsGroup);
     m_removePlugButton = new QPushButton(i18n("Remove"), plugsGroup);
@@ -150,8 +146,8 @@ void SketchSdkPanel::setupUi()
 
     editorLayout->addWidget(plugsGroup);
 
-    auto *slotsGroup = new QGroupBox(i18n("Slots"), m_editorWidget);
-    auto *slotsLayout = new QVBoxLayout(slotsGroup);
+    auto* slotsGroup = new QGroupBox(i18n("Slots"), m_editorWidget);
+    auto* slotsLayout = new QVBoxLayout(slotsGroup);
 
     m_slotsTable = new QTableWidget(0, 3, slotsGroup);
     m_slotsTable->setHorizontalHeaderLabels({i18n("Name"), i18n("Interface"), i18n("Endpoint")});
@@ -162,7 +158,7 @@ void SketchSdkPanel::setupUi()
     m_slotsTable->setSelectionMode(QAbstractItemView::SingleSelection);
     slotsLayout->addWidget(m_slotsTable);
 
-    auto *slotButtonLayout = new QHBoxLayout();
+    auto* slotButtonLayout = new QHBoxLayout();
     slotButtonLayout->addStretch();
     m_addSlotButton = new QPushButton(i18n("Add"), slotsGroup);
     m_removeSlotButton = new QPushButton(i18n("Remove"), slotsGroup);
@@ -202,14 +198,13 @@ void SketchSdkPanel::setupUi()
     connect(m_ejectButton, &QPushButton::clicked, this, &SketchSdkPanel::ejectSketchSdk);
     connect(m_removeButton, &QPushButton::clicked, this, &SketchSdkPanel::removeSketchSdk);
     connect(m_closeButton, &QPushButton::clicked, this, &QDialog::reject);
-    connect(m_plugsTable, &QTableWidget::itemSelectionChanged, this,
-            &SketchSdkPanel::updateActionState);
-    connect(m_slotsTable, &QTableWidget::itemSelectionChanged, this,
-            &SketchSdkPanel::updateActionState);
+    connect(m_plugsTable, &QTableWidget::itemSelectionChanged, this, &SketchSdkPanel::updateActionState);
+    connect(m_slotsTable, &QTableWidget::itemSelectionChanged, this, &SketchSdkPanel::updateActionState);
 
     updateActionState();
 
-    bool isReady = (m_workshopStatus.toLower() == QLatin1String("ready") || m_workshopStatus.toLower() == QLatin1String("running"));
+    bool isReady = (m_workshopStatus.toLower() == QLatin1String("ready")
+                    || m_workshopStatus.toLower() == QLatin1String("running"));
     if (!isReady) {
         bool needsLaunch = (m_workshopStatus.isEmpty() || m_workshopStatus.toLower() == QLatin1String("off"));
         QString action = needsLaunch ? QStringLiteral("launch") : QStringLiteral("start");
@@ -235,7 +230,7 @@ void SketchSdkPanel::setupUi()
     }
 }
 
-void SketchSdkPanel::populateFromPrefillData(const SketchSdkData &data)
+void SketchSdkPanel::populateFromPrefillData(const SketchSdkData& data)
 {
     m_setupBaseEdit->setPlainText(data.setupBase);
     m_setupProjectEdit->setPlainText(data.setupProject);
@@ -293,8 +288,7 @@ void SketchSdkPanel::applySketchSdk()
         return;
     }
 
-    auto tempDir = std::make_unique<QTemporaryDir>(QDir::tempPath() +
-                                                   QStringLiteral("/shopkeeper-sketch-sdk-XXXXXX"));
+    auto tempDir = std::make_unique<QTemporaryDir>(QDir::tempPath() + QStringLiteral("/shopkeeper-sketch-sdk-XXXXXX"));
     if (!tempDir->isValid()) {
         finishWithError(i18n("Could not create temporary files for the sketch SDK command."));
         return;
@@ -309,21 +303,18 @@ void SketchSdkPanel::applySketchSdk()
     yamlFile.write(generateYaml().toUtf8());
     yamlFile.close();
 
-    const QString scriptPath =
-        QDir(tempDir->path()).filePath(QStringLiteral("sketch-sdk-editor.sh"));
+    const QString scriptPath = QDir(tempDir->path()).filePath(QStringLiteral("sketch-sdk-editor.sh"));
     QFile scriptFile(scriptPath);
     if (!scriptFile.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
         finishWithError(i18n("Could not create the temporary editor script."));
         return;
     }
 
-    const QByteArray script = QStringLiteral("#!/bin/bash\nset -e\ncp %1 \"$1\"\n")
-                                  .arg(shellSingleQuoted(yamlPath))
-                                  .toUtf8();
+    const QByteArray script =
+        QStringLiteral("#!/bin/bash\nset -e\ncp %1 \"$1\"\n").arg(shellSingleQuoted(yamlPath)).toUtf8();
     scriptFile.write(script);
     scriptFile.close();
-    scriptFile.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner |
-                               QFileDevice::ExeOwner);
+    scriptFile.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
 
     m_tempDir = std::move(tempDir);
 
@@ -332,9 +323,8 @@ void SketchSdkPanel::applySketchSdk()
     command.successMessage = i18n("Sketch SDK applied successfully.");
     command.emitApplied = true;
 
-    runWorkshopCommand(
-        {QStringLiteral("sketch-sdk"), m_workshopName, QStringLiteral("-p"), m_projectPath},
-        command, scriptPath);
+    runWorkshopCommand({QStringLiteral("sketch-sdk"), m_workshopName, QStringLiteral("-p"), m_projectPath}, command,
+                       scriptPath);
 }
 
 void SketchSdkPanel::stashSketchSdk()
@@ -343,9 +333,9 @@ void SketchSdkPanel::stashSketchSdk()
     command.runningMessage = i18n("Stashing sketch SDK…");
     command.successMessage = i18n("Sketch SDK stashed successfully.");
 
-    runWorkshopCommand({QStringLiteral("sketch-sdk"), m_workshopName, QStringLiteral("--stash"),
-                        QStringLiteral("-p"), m_projectPath},
-                       command);
+    runWorkshopCommand(
+        {QStringLiteral("sketch-sdk"), m_workshopName, QStringLiteral("--stash"), QStringLiteral("-p"), m_projectPath},
+        command);
 }
 
 void SketchSdkPanel::restoreSketchSdk()
@@ -354,16 +344,16 @@ void SketchSdkPanel::restoreSketchSdk()
     command.runningMessage = i18n("Restoring sketch SDK…");
     command.successMessage = i18n("Sketch SDK restored successfully.");
 
-    runWorkshopCommand({QStringLiteral("sketch-sdk"), m_workshopName, QStringLiteral("--restore"),
-                        QStringLiteral("-p"), m_projectPath},
+    runWorkshopCommand({QStringLiteral("sketch-sdk"), m_workshopName, QStringLiteral("--restore"), QStringLiteral("-p"),
+                        m_projectPath},
                        command);
 }
 
 void SketchSdkPanel::ejectSketchSdk()
 {
     bool ok = false;
-    const QString name = QInputDialog::getText(this, i18n("Eject Sketch SDK"), i18n("SDK name:"),
-                                               QLineEdit::Normal, QStringLiteral("sketch"), &ok)
+    const QString name = QInputDialog::getText(this, i18n("Eject Sketch SDK"), i18n("SDK name:"), QLineEdit::Normal,
+                                               QStringLiteral("sketch"), &ok)
                              .trimmed();
     if (!ok) {
         return;
@@ -386,11 +376,9 @@ void SketchSdkPanel::ejectSketchSdk()
 void SketchSdkPanel::removeSketchSdk()
 {
     auto result = QMessageBox::question(
-        this,
-        i18n("Remove Sketch SDK"),
+        this, i18n("Remove Sketch SDK"),
         i18n("Are you sure you want to remove the sketch SDK from workshop \"%1\"?", m_workshopName),
-        QMessageBox::Yes | QMessageBox::No
-    );
+        QMessageBox::Yes | QMessageBox::No);
     if (result != QMessageBox::Yes) {
         return;
     }
@@ -400,9 +388,9 @@ void SketchSdkPanel::removeSketchSdk()
     command.successMessage = i18n("Sketch SDK removed successfully.");
     command.closeOnSuccess = true;
 
-    runWorkshopCommand({QStringLiteral("sketch-sdk"), m_workshopName, QStringLiteral("--remove"),
-                        QStringLiteral("-p"), m_projectPath},
-                       command);
+    runWorkshopCommand(
+        {QStringLiteral("sketch-sdk"), m_workshopName, QStringLiteral("--remove"), QStringLiteral("-p"), m_projectPath},
+        command);
 }
 
 void SketchSdkPanel::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
@@ -466,7 +454,8 @@ void SketchSdkPanel::onProcessError(QProcess::ProcessError error)
 void SketchSdkPanel::updateActionState()
 {
     const bool busy = m_process != nullptr;
-    const bool isReady = (m_workshopStatus.toLower() == QLatin1String("ready") || m_workshopStatus.toLower() == QLatin1String("running"));
+    const bool isReady = (m_workshopStatus.toLower() == QLatin1String("ready")
+                          || m_workshopStatus.toLower() == QLatin1String("running"));
 
     m_addPlugButton->setEnabled(!busy && isReady);
     m_removePlugButton->setEnabled(!busy && isReady && m_plugsTable->currentRow() >= 0);
@@ -480,45 +469,46 @@ void SketchSdkPanel::updateActionState()
     m_closeButton->setEnabled(!busy);
 
     if (!isReady && !busy) {
-        m_statusLabel->setText(i18n("<h3>Workshop \"%1\" is currently stopped/offline</h3>"
-                                    "<p>You must start the workshop from the sidebar or bottom panel "
-                                    "before you can configure, apply, or eject its sketch SDK.</p>", m_workshopName));
+        m_statusLabel->setText(
+            i18n("<h3>Workshop \"%1\" is currently stopped/offline</h3>"
+                 "<p>You must start the workshop from the sidebar or bottom panel "
+                 "before you can configure, apply, or eject its sketch SDK.</p>",
+                 m_workshopName));
         m_statusLabel->setStyleSheet(QStringLiteral("color: #e74c3c; font-weight: bold;"));
         m_statusLabel->show();
     }
 }
 
-void SketchSdkPanel::addPlugRow(const QString &name, const QString &interfaceName,
-                                const QString &workshopTarget)
+void SketchSdkPanel::addPlugRow(const QString& name, const QString& interfaceName, const QString& workshopTarget)
 {
     const int row = m_plugsTable->rowCount();
     m_plugsTable->insertRow(row);
     m_plugsTable->setItem(row, 0, new QTableWidgetItem(name));
 
-    auto *interfaceItem = new QTableWidgetItem(
-        interfaceName.trimmed().isEmpty() ? QStringLiteral("mount") : interfaceName.trimmed());
+    auto* interfaceItem =
+        new QTableWidgetItem(interfaceName.trimmed().isEmpty() ? QStringLiteral("mount") : interfaceName.trimmed());
     interfaceItem->setFlags(interfaceItem->flags() & ~Qt::ItemIsEditable);
     m_plugsTable->setItem(row, 1, interfaceItem);
     m_plugsTable->setItem(row, 2, new QTableWidgetItem(workshopTarget));
     m_plugsTable->setCurrentCell(row, 0);
 }
 
-void SketchSdkPanel::addSlotRow(const QString &name, const QString &interfaceName, int endpoint)
+void SketchSdkPanel::addSlotRow(const QString& name, const QString& interfaceName, int endpoint)
 {
     const int row = m_slotsTable->rowCount();
     m_slotsTable->insertRow(row);
     m_slotsTable->setItem(row, 0, new QTableWidgetItem(name));
 
-    auto *interfaceItem = new QTableWidgetItem(
-        interfaceName.trimmed().isEmpty() ? QStringLiteral("tunnel") : interfaceName.trimmed());
+    auto* interfaceItem =
+        new QTableWidgetItem(interfaceName.trimmed().isEmpty() ? QStringLiteral("tunnel") : interfaceName.trimmed());
     interfaceItem->setFlags(interfaceItem->flags() & ~Qt::ItemIsEditable);
     m_slotsTable->setItem(row, 1, interfaceItem);
     m_slotsTable->setItem(row, 2, new QTableWidgetItem(QString::number(endpoint)));
     m_slotsTable->setCurrentCell(row, 0);
 }
 
-void SketchSdkPanel::runWorkshopCommand(const QStringList &arguments, const PendingCommand &command,
-                                        const QString &editorScriptPath)
+void SketchSdkPanel::runWorkshopCommand(const QStringList& arguments, const PendingCommand& command,
+                                        const QString& editorScriptPath)
 {
     if (m_process) {
         finishWithError(i18n("A workshop command is already running."));
@@ -560,7 +550,7 @@ void SketchSdkPanel::runWorkshopCommand(const QStringList &arguments, const Pend
     m_process->start();
 }
 
-void SketchSdkPanel::setBusy(bool busy, const QString &message)
+void SketchSdkPanel::setBusy(bool busy, const QString& message)
 {
     m_editorWidget->setEnabled(!busy);
     if (busy) {
@@ -574,7 +564,7 @@ void SketchSdkPanel::setBusy(bool busy, const QString &message)
     updateActionState();
 }
 
-void SketchSdkPanel::finishWithError(const QString &error)
+void SketchSdkPanel::finishWithError(const QString& error)
 {
     m_standardOutput.clear();
     m_standardError.clear();
@@ -589,7 +579,7 @@ void SketchSdkPanel::cleanupTemporaryFiles()
     m_tempDir.reset();
 }
 
-bool SketchSdkPanel::validateForm(QString *errorMessage) const
+bool SketchSdkPanel::validateForm(QString* errorMessage) const
 {
     QSet<QString> plugNames;
     QSet<QString> slotNames;
@@ -635,8 +625,7 @@ bool SketchSdkPanel::validateForm(QString *errorMessage) const
             return false;
         }
         if (!ok || endpoint < 1 || endpoint > 65535) {
-            *errorMessage =
-                i18n("Slot endpoint in row %1 must be a port number between 1 and 65535.", row + 1);
+            *errorMessage = i18n("Slot endpoint in row %1 must be a port number between 1 and 65535.", row + 1);
             return false;
         }
         if (interfaceName.isEmpty()) {
@@ -677,16 +666,16 @@ QString SketchSdkPanel::generateYaml() const
     return serializeSketchSdk(data);
 }
 
-QString SketchSdkPanel::shellSingleQuoted(const QString &value) const
+QString SketchSdkPanel::shellSingleQuoted(const QString& value) const
 {
     QString escaped = value;
     escaped.replace(QLatin1Char('\''), QLatin1String("'\\''"));
     return QLatin1Char('\'') + escaped + QLatin1Char('\'');
 }
 
-QString SketchSdkPanel::tableItemText(QTableWidget *table, int row, int column) const
+QString SketchSdkPanel::tableItemText(QTableWidget* table, int row, int column) const
 {
-    if (auto *item = table->item(row, column)) {
+    if (auto* item = table->item(row, column)) {
         return item->text();
     }
 

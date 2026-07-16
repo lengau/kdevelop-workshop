@@ -2,30 +2,30 @@
 #include <QRegularExpression>
 #include <QDebug>
 
-SketchSdkData parseSketchSdk(const QStringList &lines)
+SketchSdkData parseSketchSdk(const QStringList& lines)
 {
     SketchSdkData data;
     bool inSketchSdk = false;
     bool inHooks = false;
     bool inPlugs = false;
     bool inSlots = false;
-    
+
     QString currentItemName;
-    
+
     // For multiline strings (hooks)
     bool inSetupBaseLiteral = false;
     bool inSetupProjectLiteral = false;
     int baseIndent = 0;
-    
+
     for (int i = 0; i < lines.count(); ++i) {
         QString line = lines.at(i);
         QString trimmed = line.trimmed();
-        
+
         int indent = 0;
         while (indent < line.length() && line.at(indent).isSpace()) {
             indent++;
         }
-        
+
         // Handle multiline literal blocks for setup-base / setup-project
         if (inSetupBaseLiteral || inSetupProjectLiteral) {
             const bool isEnd = !trimmed.isEmpty() && indent <= baseIndent;
@@ -42,15 +42,17 @@ SketchSdkData parseSketchSdk(const QStringList &lines)
                 inSetupProjectLiteral = false;
             }
         }
-        
+
         if (trimmed.isEmpty() || trimmed.startsWith(QLatin1Char('#'))) {
             continue;
         }
-        
+
         if (trimmed.startsWith(QLatin1String("- name:"))) {
             QString val = trimmed.mid(7).trimmed();
-            if (val.startsWith(QLatin1Char('"')) && val.endsWith(QLatin1Char('"'))) val = val.mid(1, val.length() - 2);
-            if (val.startsWith(QLatin1Char('\'')) && val.endsWith(QLatin1Char('\''))) val = val.mid(1, val.length() - 2);
+            if (val.startsWith(QLatin1Char('"')) && val.endsWith(QLatin1Char('"')))
+                val = val.mid(1, val.length() - 2);
+            if (val.startsWith(QLatin1Char('\'')) && val.endsWith(QLatin1Char('\'')))
+                val = val.mid(1, val.length() - 2);
             if (val == QLatin1String("sketch")) {
                 inSketchSdk = true;
             } else {
@@ -61,30 +63,31 @@ SketchSdkData parseSketchSdk(const QStringList &lines)
             inSlots = false;
             continue;
         }
-        
-        if (!inSketchSdk) continue;
-        
+
+        if (!inSketchSdk)
+            continue;
+
         if (trimmed.startsWith(QLatin1String("hooks:"))) {
             inHooks = true;
             inPlugs = false;
             inSlots = false;
             continue;
         }
-        
+
         if (trimmed.startsWith(QLatin1String("plugs:"))) {
             inHooks = false;
             inPlugs = true;
             inSlots = false;
             continue;
         }
-        
+
         if (trimmed.startsWith(QLatin1String("slots:"))) {
             inHooks = false;
             inPlugs = false;
             inSlots = true;
             continue;
         }
-        
+
         if (inHooks) {
             if (trimmed.startsWith(QLatin1String("setup-base:"))) {
                 QString right = trimmed.mid(11).trimmed();
@@ -112,11 +115,13 @@ SketchSdkData parseSketchSdk(const QStringList &lines)
             } else if (!currentItemName.isEmpty()) {
                 if (trimmed.startsWith(QLatin1String("interface:"))) {
                     QString val = trimmed.mid(10).trimmed();
-                    if (val.startsWith(QLatin1Char('"')) || val.startsWith(QLatin1Char('\''))) val = val.mid(1, val.length() - 2);
+                    if (val.startsWith(QLatin1Char('"')) || val.startsWith(QLatin1Char('\'')))
+                        val = val.mid(1, val.length() - 2);
                     data.plugs[currentItemName].interfaceName = val;
                 } else if (trimmed.startsWith(QLatin1String("workshop-target:"))) {
                     QString val = trimmed.mid(16).trimmed();
-                    if (val.startsWith(QLatin1Char('"')) || val.startsWith(QLatin1Char('\''))) val = val.mid(1, val.length() - 2);
+                    if (val.startsWith(QLatin1Char('"')) || val.startsWith(QLatin1Char('\'')))
+                        val = val.mid(1, val.length() - 2);
                     data.plugs[currentItemName].workshopTarget = val;
                 }
             }
@@ -127,7 +132,8 @@ SketchSdkData parseSketchSdk(const QStringList &lines)
             } else if (!currentItemName.isEmpty()) {
                 if (trimmed.startsWith(QLatin1String("interface:"))) {
                     QString val = trimmed.mid(10).trimmed();
-                    if (val.startsWith(QLatin1Char('"')) || val.startsWith(QLatin1Char('\''))) val = val.mid(1, val.length() - 2);
+                    if (val.startsWith(QLatin1Char('"')) || val.startsWith(QLatin1Char('\'')))
+                        val = val.mid(1, val.length() - 2);
                     data.slots[currentItemName].interfaceName = val;
                 } else if (trimmed.startsWith(QLatin1String("endpoint:"))) {
                     data.slots[currentItemName].endpoint = trimmed.mid(9).trimmed().toInt();
@@ -135,31 +141,31 @@ SketchSdkData parseSketchSdk(const QStringList &lines)
             }
         }
     }
-    
+
     data.setupBase = data.setupBase.trimmed();
     data.setupProject = data.setupProject.trimmed();
-    
+
     return data;
 }
 
-QString serializeSketchSdk(const SketchSdkData &data)
+QString serializeSketchSdk(const SketchSdkData& data)
 {
     QString out;
     out.append(QStringLiteral("name: sketch\n"));
     out.append(QStringLiteral("hooks:\n"));
-    
+
     out.append(QStringLiteral("  setup-base: |\n"));
     const QStringList baseLines = data.setupBase.split(QLatin1Char('\n'));
     for (const QString& line : baseLines) {
         out.append(QStringLiteral("    %1\n").arg(line));
     }
-    
+
     out.append(QStringLiteral("  setup-project: |\n"));
     const QStringList projLines = data.setupProject.split(QLatin1Char('\n'));
     for (const QString& line : projLines) {
         out.append(QStringLiteral("    %1\n").arg(line));
     }
-    
+
     out.append(QStringLiteral("plugs:\n"));
     if (data.plugs.isEmpty()) {
         out.append(QStringLiteral("  {}\n"));
@@ -170,7 +176,7 @@ QString serializeSketchSdk(const SketchSdkData &data)
             out.append(QStringLiteral("    workshop-target: '%1'\n").arg(it.value().workshopTarget));
         }
     }
-    
+
     out.append(QStringLiteral("slots:\n"));
     if (data.slots.isEmpty()) {
         out.append(QStringLiteral("  {}\n"));
@@ -181,33 +187,33 @@ QString serializeSketchSdk(const SketchSdkData &data)
             out.append(QStringLiteral("    endpoint: %1\n").arg(it.value().endpoint));
         }
     }
-    
+
     return out;
 }
 
-SketchSdkData parseSketchSdkMap(const QStringList &lines)
+SketchSdkData parseSketchSdkMap(const QStringList& lines)
 {
     SketchSdkData data;
     bool inHooks = false;
     bool inPlugs = false;
     bool inSlots = false;
-    
+
     QString currentItemName;
-    
+
     // For multiline strings (hooks)
     bool inSetupBaseLiteral = false;
     bool inSetupProjectLiteral = false;
     int baseIndent = 0;
-    
+
     for (int i = 0; i < lines.count(); ++i) {
         QString line = lines.at(i);
         QString trimmed = line.trimmed();
-        
+
         int indent = 0;
         while (indent < line.length() && line.at(indent).isSpace()) {
             indent++;
         }
-        
+
         // Handle multiline literal blocks for setup-base / setup-project
         if (inSetupBaseLiteral || inSetupProjectLiteral) {
             const bool isEnd = !trimmed.isEmpty() && indent <= baseIndent;
@@ -224,32 +230,32 @@ SketchSdkData parseSketchSdkMap(const QStringList &lines)
                 inSetupProjectLiteral = false;
             }
         }
-        
+
         if (trimmed.isEmpty() || trimmed.startsWith(QLatin1Char('#'))) {
             continue;
         }
-        
+
         if (trimmed.startsWith(QLatin1String("hooks:"))) {
             inHooks = true;
             inPlugs = false;
             inSlots = false;
             continue;
         }
-        
+
         if (trimmed.startsWith(QLatin1String("plugs:"))) {
             inHooks = false;
             inPlugs = true;
             inSlots = false;
             continue;
         }
-        
+
         if (trimmed.startsWith(QLatin1String("slots:"))) {
             inHooks = false;
             inPlugs = false;
             inSlots = true;
             continue;
         }
-        
+
         if (inHooks) {
             if (trimmed.startsWith(QLatin1String("setup-base:"))) {
                 QString right = trimmed.mid(11).trimmed();
@@ -277,11 +283,13 @@ SketchSdkData parseSketchSdkMap(const QStringList &lines)
             } else if (!currentItemName.isEmpty()) {
                 if (trimmed.startsWith(QLatin1String("interface:"))) {
                     QString val = trimmed.mid(10).trimmed();
-                    if (val.startsWith(QLatin1Char('"')) || val.startsWith(QLatin1Char('\''))) val = val.mid(1, val.length() - 2);
+                    if (val.startsWith(QLatin1Char('"')) || val.startsWith(QLatin1Char('\'')))
+                        val = val.mid(1, val.length() - 2);
                     data.plugs[currentItemName].interfaceName = val;
                 } else if (trimmed.startsWith(QLatin1String("workshop-target:"))) {
                     QString val = trimmed.mid(16).trimmed();
-                    if (val.startsWith(QLatin1Char('"')) || val.startsWith(QLatin1Char('\''))) val = val.mid(1, val.length() - 2);
+                    if (val.startsWith(QLatin1Char('"')) || val.startsWith(QLatin1Char('\'')))
+                        val = val.mid(1, val.length() - 2);
                     data.plugs[currentItemName].workshopTarget = val;
                 }
             }
@@ -292,7 +300,8 @@ SketchSdkData parseSketchSdkMap(const QStringList &lines)
             } else if (!currentItemName.isEmpty()) {
                 if (trimmed.startsWith(QLatin1String("interface:"))) {
                     QString val = trimmed.mid(10).trimmed();
-                    if (val.startsWith(QLatin1Char('"')) || val.startsWith(QLatin1Char('\''))) val = val.mid(1, val.length() - 2);
+                    if (val.startsWith(QLatin1Char('"')) || val.startsWith(QLatin1Char('\'')))
+                        val = val.mid(1, val.length() - 2);
                     data.slots[currentItemName].interfaceName = val;
                 } else if (trimmed.startsWith(QLatin1String("endpoint:"))) {
                     data.slots[currentItemName].endpoint = trimmed.mid(9).trimmed().toInt();
@@ -300,9 +309,9 @@ SketchSdkData parseSketchSdkMap(const QStringList &lines)
             }
         }
     }
-    
+
     data.setupBase = data.setupBase.trimmed();
     data.setupProject = data.setupProject.trimmed();
-    
+
     return data;
 }

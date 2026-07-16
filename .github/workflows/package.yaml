@@ -70,4 +70,3 @@ jobs:
         with:
           name: kdevelop-workshop-deb-${{ matrix.runs-on }}
           path: dist/kdevelop-workshop_*.deb
-

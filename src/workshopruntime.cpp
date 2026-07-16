@@ -26,9 +26,9 @@ void WorkshopRuntime::startProcess(QProcess* process) const
     QStringList args = process->arguments();
 
     QStringList newArgs;
-    newArgs << QStringLiteral("exec") << QStringLiteral("-w") << QStringLiteral("/project") 
-            << m_workshopName << QStringLiteral("--") << program << args;
-    
+    newArgs << QStringLiteral("exec") << QStringLiteral("-w") << QStringLiteral("/project") << m_workshopName
+            << QStringLiteral("--") << program << args;
+
     process->setProgram(QStringLiteral("workshop"));
     process->setArguments(newArgs);
 }
@@ -37,9 +37,9 @@ void WorkshopRuntime::startProcess(KProcess* process) const
 {
     QStringList argv = process->program();
     QStringList newArgv;
-    newArgv << QStringLiteral("workshop") << QStringLiteral("exec") << QStringLiteral("-w") << QStringLiteral("/project") 
-            << m_workshopName << QStringLiteral("--") << argv;
-    
+    newArgv << QStringLiteral("workshop") << QStringLiteral("exec") << QStringLiteral("-w")
+            << QStringLiteral("/project") << m_workshopName << QStringLiteral("--") << argv;
+
     process->clearProgram();
     process->setProgram(newArgv);
 }
