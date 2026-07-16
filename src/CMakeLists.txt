@@ -1,5 +1,13 @@
 set(kdevelop-workshop_SRCS
     kdevelop-workshop.cpp
+    workshopruntime.cpp
+    workshopconfigpage.cpp
+    workshoptoolview.cpp
+    workshopterminaltoolview.cpp
+    workshopapi.cpp
+    workshopwizard.cpp
+    sketchsdkpanel.cpp
+    parsesketchsdk.cpp
 )
 
 ecm_qt_declare_logging_category(kdevelop-workshop_SRCS
@@ -16,4 +24,7 @@ kdevplatform_add_plugin(kdevelop-workshop
 
 target_link_libraries(kdevelop-workshop
     KDev::Interfaces
+    KDev::Util
+    KDev::Sublime
+    KF6::Parts
 )
