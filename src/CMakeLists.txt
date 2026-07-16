@@ -11,6 +11,8 @@ set(kdevelop-workshop_SRCS
     sketchsdk/parsesketchsdk.cpp
 )
 
+KCONFIG_ADD_KCFG_FILES(kdevelop-workshop_SRCS workshopsettings.kcfgc)
+
 ecm_qt_declare_logging_category(kdevelop-workshop_SRCS
     HEADER debug.h
     IDENTIFIER PLUGIN_KDEVELOP_WORKSHOP
@@ -33,6 +35,7 @@ target_link_libraries(kdevelop-workshop
     KDev::Interfaces
     KDev::Util
     KDev::Sublime
+    KF6::ConfigCore
     KF6::Parts
     Qt6::Network
     yaml-cpp::yaml-cpp

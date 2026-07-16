@@ -1,0 +1,5 @@
+File=workshopsettings.kcfg
+ClassName=WorkshopSettings
+Mutators=true
+DefaultValueGetters=true
+Singleton=true

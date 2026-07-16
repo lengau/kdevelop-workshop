@@ -16,11 +16,6 @@ public:
     QIcon icon() const override;
     ConfigPageType configPageType() const override;
 
-public Q_SLOTS:
-    void apply() override;
-    void defaults() override;
-    void reset() override;
-
 private:
     QLineEdit* m_socketPathEdit;
 };

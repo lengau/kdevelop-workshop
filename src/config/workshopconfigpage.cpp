@@ -1,16 +1,14 @@
 #include "workshopconfigpage.h"
+#include "workshopsettings.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QIcon>
-#include <KCoreConfigSkeleton>
-#include <KSharedConfig>
-#include <KConfigGroup>
 
 WorkshopConfigPage::WorkshopConfigPage(KDevelop::IPlugin* plugin, QWidget* parent)
-    : KDevelop::ConfigPage(plugin, new KCoreConfigSkeleton(QStringLiteral("kdevelop-workshoprc"), parent), parent)
+    : KDevelop::ConfigPage(plugin, WorkshopSettings::self(), parent)
 {
     auto* layout = new QVBoxLayout(this);
 
@@ -21,16 +19,12 @@ WorkshopConfigPage::WorkshopConfigPage(KDevelop::IPlugin* plugin, QWidget* paren
     formLayout->addWidget(new QLabel(QStringLiteral("workshopd Socket Path:"), this));
 
     m_socketPathEdit = new QLineEdit(this);
-    m_socketPathEdit->setPlaceholderText(QStringLiteral("/var/snap/workshop/common/workshop/workshop.socket"));
+    m_socketPathEdit->setObjectName(QStringLiteral("kcfg_SocketPath"));
+    m_socketPathEdit->setPlaceholderText(WorkshopSettings::defaultSocketPathValue());
     formLayout->addWidget(m_socketPathEdit);
 
     layout->addLayout(formLayout);
     layout->addStretch();
-
-    // Signal KDevelop that settings have changed when editing the text field
-    connect(m_socketPathEdit, &QLineEdit::textChanged, this, &WorkshopConfigPage::changed);
-
-    reset();
 }
 
 QString WorkshopConfigPage::name() const
@@ -51,24 +45,4 @@ QIcon WorkshopConfigPage::icon() const
 KDevelop::ConfigPage::ConfigPageType WorkshopConfigPage::configPageType() const
 {
     return RuntimeConfigPage;
-}
-
-void WorkshopConfigPage::apply()
-{
-    auto config = KSharedConfig::openConfig(QStringLiteral("kdevelop-workshoprc"));
-    KConfigGroup group = config->group(QStringLiteral("General"));
-    group.writeEntry("SocketPath", m_socketPathEdit->text().trimmed());
-    group.sync();
-}
-
-void WorkshopConfigPage::defaults()
-{
-    m_socketPathEdit->clear();
-}
-
-void WorkshopConfigPage::reset()
-{
-    auto config = KSharedConfig::openConfig(QStringLiteral("kdevelop-workshoprc"));
-    KConfigGroup group = config->group(QStringLiteral("General"));
-    m_socketPathEdit->setText(group.readEntry("SocketPath", QString()));
 }
