@@ -237,7 +237,7 @@ void WorkshopToolView::onProjectChanged(int index)
 
             WorkshopApi::queryAsync(
                 QStringLiteral("/v1/projects/%1/workshops").arg(projectId), this,
-                [this, projectPath, projectId, loadingLabel](const QJsonDocument& workshopsDoc) {
+                [this, projectPath, projectId](const QJsonDocument& workshopsDoc) {
                     if (!ProjectSelectionGuard::selectionMatches(projectPath,
                                                                  m_projectCombo->currentData().toString())) {
                         return;
