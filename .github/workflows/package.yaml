@@ -16,11 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - runs-on: ubuntu-26.04
-            arch: amd64
-          - runs-on: ubuntu-26.04-arm
-            arch: arm64
+        runs-on: [ubuntu-26.04, ubuntu-26.04-arm]
     container:
       image: ubuntu:26.04
       options: --user root
