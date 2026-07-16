@@ -25,6 +25,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Disable apt docker-clean
+        run: rm -f /etc/apt/apt.conf.d/docker-clean
+
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            /var/cache/apt/archives
+            /var/lib/apt/lists
+          key: ${{ matrix.runs-on }}-apt-${{ hashFiles('debian/control') }}
+          restore-keys: |
+            ${{ matrix.runs-on }}-apt-
+
       - name: Install packaging tools
         run: |
           apt-get update
@@ -46,3 +59,9 @@ jobs:
       - name: Test installation
         run: |
           apt-get install -y --no-install-recommends ../kdevelop-workshop_*.deb
+
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: kdevelop-workshop-deb-${{ matrix.runs-on }}
+          path: ../kdevelop-workshop_*.deb
