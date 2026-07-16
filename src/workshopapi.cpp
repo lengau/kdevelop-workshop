@@ -19,7 +19,7 @@ QJsonDocument query(const QString& path, const QByteArray& postData, const QStri
         socketPath = QStringLiteral("/var/snap/workshop/common/workshop/workshop.socket");
 
     QNetworkAccessManager nam;
-    QNetworkRequest request(QUrl(QStringLiteral("http://localhost") + path));
+    QNetworkRequest request(QUrl(QStringLiteral("unix+http://localhost") + path));
     request.setAttribute(QNetworkRequest::FullLocalServerNameAttribute, socketPath);
     if (!postData.isEmpty())
         request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
