@@ -15,6 +15,7 @@ include(ECMAddTests)
 include(FeatureSummary)
 
 find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS
+    Config
     I18n
     Parts
 )

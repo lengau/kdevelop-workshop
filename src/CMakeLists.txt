@@ -23,6 +23,8 @@ kdevplatform_add_plugin(kdevelop-workshop
     SOURCES ${kdevelop-workshop_SRCS}
 )
 
+KCONFIG_ADD_KCFG_FILES(kdevelop-workshop workshopsettings.kcfgc)
+
 set_source_files_properties(
     sketchsdk/parsesketchsdk.cpp
     wizard/workshopwizard.cpp
@@ -33,6 +35,7 @@ target_link_libraries(kdevelop-workshop
     KDev::Interfaces
     KDev::Util
     KDev::Sublime
+    KF6::ConfigCore
     KF6::Parts
     Qt6::Network
     yaml-cpp::yaml-cpp

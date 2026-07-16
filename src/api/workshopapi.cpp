@@ -1,20 +1,17 @@
 #include "workshopapi.h"
 #include "debug.h"
+#include "workshopsettings.h"
 #include <QEventLoop>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QUrl>
-#include <KSharedConfig>
-#include <KConfigGroup>
 
 namespace WorkshopApi {
 
 QJsonDocument query(const QString& path, const QByteArray& postData, const QString& method)
 {
-    auto config = KSharedConfig::openConfig(QStringLiteral("kdevelop-workshoprc"));
-    KConfigGroup group = config->group(QStringLiteral("General"));
-    QString socketPath = group.readEntry("SocketPath", QString()).trimmed();
+    QString socketPath = WorkshopSettings::self()->socketPath().trimmed();
     if (socketPath.isEmpty())
         socketPath = QStringLiteral("/var/snap/workshop/common/workshop/workshop.socket");
 
