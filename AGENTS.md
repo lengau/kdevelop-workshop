@@ -68,6 +68,10 @@ When writing C++ code for the KDevelop plugin, adhere to the upstream KDevelop `
 
 ### Processes
 
+- **Branch Hygiene**: Do active work on a dedicated branch created from the current `origin/main`
+  state. Keep `main` clean, rebase the work branch onto `origin/main` before opening or updating a
+  PR, and delete the branch locally and remotely after merge. If you need to move back to `main`
+  during a task, stash or commit the branch work first rather than editing directly on `main`.
 - **Conventional Commits**: Commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) and be no longer than 80 characters. Use the following types:
   - `ci`, `build`, `feat`, `fix`, `perf`, `refactor`, `style`, `test`, `docs`, `chore`
 - **Verification**: Always verify building, formatting, and installation tests locally or check GitHub Actions run results before concluding a task.
