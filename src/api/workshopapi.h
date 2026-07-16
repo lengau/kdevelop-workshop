@@ -4,10 +4,16 @@
 #include <QJsonDocument>
 #include <QString>
 #include <QByteArray>
+#include <functional>
+
+class QObject;
 
 namespace WorkshopApi {
-QJsonDocument query(const QString& path, const QByteArray& postData = QByteArray(),
-                    const QString& method = QStringLiteral("GET"));
+using QueryCallback = std::function<void(const QJsonDocument&)>;
+
+void queryAsync(const QString& path, QObject* context, QueryCallback callback);
+void queryAsync(const QString& path, const QByteArray& postData, const QString& method, QObject* context,
+                QueryCallback callback);
 }
 
 #endif // WORKSHOPAPI_H

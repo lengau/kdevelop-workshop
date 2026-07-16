@@ -91,6 +91,7 @@ private:
     QString m_projectPath;
     WorkshopWizard* m_wizard;
     QTextEdit* m_previewEdit;
+    bool m_validating = false;
 };
 
 #endif // WORKSHOPWIZARD_H

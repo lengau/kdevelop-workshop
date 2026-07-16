@@ -19,8 +19,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-#include <QThread>
 #include <QDir>
+#include <functional>
 #include "api/workshopapi.h"
 
 class WorkshopToolViewFactory : public KDevelop::IToolViewFactory
@@ -136,87 +136,53 @@ void kdevelop_workshop::projectOpened(KDevelop::IProject* project)
 void kdevelop_workshop::addWorkshopsForProject(KDevelop::IProject* project)
 {
     QString projectPath = project->path().toLocalFile();
-
-    // Query the API in a background thread to prevent freezing the GUI on startup
-    auto* thread = QThread::create([this, projectPath]() {
-        QJsonDocument doc = WorkshopApi::query(QStringLiteral("/v1/projects"));
+    auto extractProjectId = [projectPath](const QJsonDocument& doc) {
         if (doc.isEmpty()) {
-            qCWarning(PLUGIN_KDEVELOP_WORKSHOP)
-                << "Failed to connect to /v1/projects (daemon socket activation timeout?)";
+            return QString();
+        }
+
+        const QJsonArray projects = doc.object().value(QStringLiteral("result")).toArray();
+        for (const QJsonValue& val : projects) {
+            const QJsonObject proj = val.toObject();
+            if (proj.value(QStringLiteral("path")).toString() == projectPath) {
+                return proj.value(QStringLiteral("id")).toString();
+            }
+        }
+        return QString();
+    };
+
+    std::function<void(const QString&)> fetchAndRegisterWorkshops;
+    fetchAndRegisterWorkshops = [this, projectPath](const QString& projectId) {
+        if (projectId.isEmpty()) {
             return;
         }
 
-        QJsonArray projects = doc.object().value(QStringLiteral("result")).toArray();
-        QString projectId;
-        for (const QJsonValue& val : projects) {
-            QJsonObject proj = val.toObject();
-            if (proj.value(QStringLiteral("path")).toString() == projectPath) {
-                projectId = proj.value(QStringLiteral("id")).toString();
-                break;
-            }
-        }
+        WorkshopApi::queryAsync(
+            QStringLiteral("/v1/projects/%1/workshops").arg(projectId), this,
+            [this, projectPath](const QJsonDocument& workshopsDoc) {
+                if (workshopsDoc.isEmpty()) {
+                    return;
+                }
 
-        // If project is not registered but has a .workshop directory, register it automatically
-        if (projectId.isEmpty()) {
-            QDir dir(projectPath);
-            if (dir.exists(QStringLiteral(".workshop"))) {
-                QJsonObject req;
-                req.insert(QStringLiteral("path"), projectPath);
-                QJsonDocument reqDoc(req);
-                QJsonDocument regDoc = WorkshopApi::query(
-                    QStringLiteral("/v1/projects"), reqDoc.toJson(QJsonDocument::Compact), QStringLiteral("POST"));
+                const QJsonObject result = workshopsDoc.object().value(QStringLiteral("result")).toObject();
+                const QJsonArray workshops = result.value(QStringLiteral("workshops")).toArray();
+                const QJsonArray files = result.value(QStringLiteral("files")).toArray();
 
-                // Re-query projects list to get the newly generated project ID
-                if (!regDoc.isEmpty()) {
-                    QJsonDocument newProjectsDoc = WorkshopApi::query(QStringLiteral("/v1/projects"));
-                    if (!newProjectsDoc.isEmpty()) {
-                        QJsonArray newProjects = newProjectsDoc.object().value(QStringLiteral("result")).toArray();
-                        for (const QJsonValue& val : newProjects) {
-                            QJsonObject proj = val.toObject();
-                            if (proj.value(QStringLiteral("path")).toString() == projectPath) {
-                                projectId = proj.value(QStringLiteral("id")).toString();
-                                break;
-                            }
-                        }
+                QStringList workshopNames;
+                for (const QJsonValue& val : workshops) {
+                    const QString workshopName = val.toObject().value(QStringLiteral("name")).toString();
+                    if (!workshopName.isEmpty() && !workshopNames.contains(workshopName)) {
+                        workshopNames << workshopName;
                     }
                 }
-            }
-        }
+                for (const QJsonValue& val : files) {
+                    const QString workshopName = val.toObject().value(QStringLiteral("name")).toString();
+                    if (!workshopName.isEmpty() && !workshopNames.contains(workshopName)) {
+                        workshopNames << workshopName;
+                    }
+                }
 
-        if (projectId.isEmpty())
-            return;
-
-        QJsonDocument workshopsDoc = WorkshopApi::query(QStringLiteral("/v1/projects/%1/workshops").arg(projectId));
-        if (workshopsDoc.isEmpty())
-            return;
-
-        QJsonObject result = workshopsDoc.object().value(QStringLiteral("result")).toObject();
-        QJsonArray workshops = result.value(QStringLiteral("workshops")).toArray();
-        QJsonArray files = result.value(QStringLiteral("files")).toArray();
-
-        // Deduplicate and collect workshop names from both running instances and file declarations
-        QStringList workshopNames;
-        for (const QJsonValue& val : workshops) {
-            QJsonObject ws = val.toObject();
-            QString workshopName = ws.value(QStringLiteral("name")).toString();
-            if (!workshopName.isEmpty() && !workshopNames.contains(workshopName)) {
-                workshopNames << workshopName;
-            }
-        }
-        for (const QJsonValue& val : files) {
-            QJsonObject f = val.toObject();
-            QString workshopName = f.value(QStringLiteral("name")).toString();
-            if (!workshopName.isEmpty() && !workshopNames.contains(workshopName)) {
-                workshopNames << workshopName;
-            }
-        }
-
-        // Return to the main thread to register the runtimes safely
-        QMetaObject::invokeMethod(
-            this,
-            [this, projectPath, workshopNames]() {
                 for (const QString& name : workshopNames) {
-                    // Ensure we don't register duplicate runtimes if they're already present
                     bool alreadyExists = false;
                     const auto runtimes = KDevelop::ICore::self()->runtimeController()->availableRuntimes();
                     for (auto* rt : runtimes) {
@@ -230,12 +196,46 @@ void kdevelop_workshop::addWorkshopsForProject(KDevelop::IProject* project)
                             new WorkshopRuntime(name, projectPath, this));
                     }
                 }
-            },
-            Qt::QueuedConnection);
-    });
+            });
+    };
 
-    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
-    thread->start();
+    WorkshopApi::queryAsync(
+        QStringLiteral("/v1/projects"), this,
+        [this, projectPath, extractProjectId, fetchAndRegisterWorkshops](const QJsonDocument& doc) {
+            if (doc.isEmpty()) {
+                qCWarning(PLUGIN_KDEVELOP_WORKSHOP)
+                    << "Failed to connect to /v1/projects (daemon socket activation timeout?)";
+                return;
+            }
+
+            QString projectId = extractProjectId(doc);
+            if (!projectId.isEmpty()) {
+                fetchAndRegisterWorkshops(projectId);
+                return;
+            }
+
+            QDir dir(projectPath);
+            if (!dir.exists(QStringLiteral(".workshop"))) {
+                return;
+            }
+
+            QJsonObject req;
+            req.insert(QStringLiteral("path"), projectPath);
+            WorkshopApi::queryAsync(
+                QStringLiteral("/v1/projects"), QJsonDocument(req).toJson(QJsonDocument::Compact),
+                QStringLiteral("POST"), this,
+                [this, extractProjectId, fetchAndRegisterWorkshops](const QJsonDocument& regDoc) {
+                    if (regDoc.isEmpty()) {
+                        return;
+                    }
+
+                    WorkshopApi::queryAsync(
+                        QStringLiteral("/v1/projects"), this,
+                        [extractProjectId, fetchAndRegisterWorkshops](const QJsonDocument& newProjectsDoc) {
+                            fetchAndRegisterWorkshops(extractProjectId(newProjectsDoc));
+                        });
+                });
+        });
 }
 
 KDevelop::ConfigPage* kdevelop_workshop::configPage(int number, QWidget* parent)
