@@ -27,21 +27,7 @@ The plugin is packaged using standard Debian/Ubuntu conventions under the `debia
 
 ---
 
-## 3. GitHub Actions Workflow (`.github/workflows/package.yaml`)
-
-A complete continuous integration workflow is configured to compile, package, and test-install the plugin.
-
-### High-Level Workflow
-
-- **Triggers**: Runs automatically on pull requests and pushes to the `main` branch.
-- **Concurrency**: Automatically cancels older in-progress runs when new code is pushed.
-- **Environments**: Builds and tests the plugin on both `amd64` and `arm64` runners using an `ubuntu:26.10` container.
-- **Dependencies & Caching**: Efficiently installs build dependencies (`pkg-kde-tools`, KF6/KDevelop) and caches APT packages across runs to speed up compilation.
-- **Artifacts**: Uploads the resulting `.deb` packages as workflow artifacts.
-
----
-
-## 4. Practices & Processes
+## 3. Practices & Processes
 
 ### Practices
 
@@ -79,7 +65,7 @@ When writing C++ code for the KDevelop plugin, adhere to the upstream KDevelop `
 
 ---
 
-## 5. Upstream KDE & KDevelop Guidelines
+## 4. Upstream KDE & KDevelop Guidelines
 
 If the time comes to upstream your work to the main KDevelop codebase, follow the official community guidelines:
 
