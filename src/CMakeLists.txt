@@ -27,4 +27,5 @@ target_link_libraries(kdevelop-workshop
     KDev::Util
     KDev::Sublime
     KF6::Parts
+    Qt6::Network
 )
