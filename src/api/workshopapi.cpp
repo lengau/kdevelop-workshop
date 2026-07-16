@@ -9,6 +9,7 @@
 #include <QRestReply>
 #include <optional>
 #include <QNetworkRequest>
+#include <QUrl>
 
 namespace WorkshopApi {
 
