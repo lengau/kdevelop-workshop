@@ -28,7 +28,6 @@
 #include <KLocalizedString>
 #include <QFile>
 #include <QDir>
-#include <QPointer>
 #include <QStandardPaths>
 #include <interfaces/icore.h>
 #include <interfaces/iprojectcontroller.h>
@@ -207,7 +206,8 @@ void WorkshopToolView::onProjectChanged(int index)
     }
 
     QString projectPath = m_projectCombo->itemData(index).toString();
-    if (m_lastProjectPath != projectPath) {
+    const bool projectChanged = (m_lastProjectPath != projectPath);
+    if (projectChanged) {
         clearAllTransitionState();
         m_lastProjectPath = projectPath;
         m_projectId.clear();
@@ -215,11 +215,10 @@ void WorkshopToolView::onProjectChanged(int index)
 
     // Only display the connecting loader if there is currently no list rendered (avoids flickering on updates)
     bool listWasEmpty = m_workshopWidgets.isEmpty();
-    QPointer<QLabel> loadingLabel = nullptr;
-    if (listWasEmpty) {
+    if (projectChanged || listWasEmpty) {
         clearLayout();
-        loadingLabel = new QLabel(QStringLiteral("Connecting to workshopd API..."), m_workshopsContainer);
-        m_workshopsLayout->insertWidget(0, loadingLabel);
+        m_workshopsLayout->insertWidget(
+            0, new QLabel(QStringLiteral("Connecting to workshopd API..."), m_workshopsContainer));
     }
 
     WorkshopApi::queryAsync(QStringLiteral("/v1/projects"), this, [this, projectPath](const QJsonDocument& doc) {
