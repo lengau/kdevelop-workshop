@@ -461,13 +461,15 @@ void WorkshopToolView::showContextMenu(const QString& workshopName, const QPoint
             status = m_workshopWidgets[workshopName].statusLabel->text();
         }
 
-        // Load existing sketch SDK data from local share path if it exists
+        // Load existing sketch SDK data from the XDG data location if it exists
         SketchSdkData sketchData;
         QString sketchYamlPath;
         if (!m_projectId.isEmpty()) {
             const QString dataPath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
-            sketchYamlPath = QDir(dataPath).filePath(
-                QStringLiteral("workshop/id/%1/%2/sdk/sketch/current/sdk.yaml").arg(m_projectId, workshopName));
+            if (!dataPath.isEmpty()) {
+                sketchYamlPath = QDir(dataPath).filePath(
+                    QStringLiteral("workshop/id/%1/%2/sdk/sketch/current/sdk.yaml").arg(m_projectId, workshopName));
+            }
         }
 
         if (!sketchYamlPath.isEmpty() && QFile::exists(sketchYamlPath)) {
