@@ -146,6 +146,22 @@ void WorkshopToolView::clearLayout()
     m_workshopWidgets.clear();
 }
 
+void WorkshopToolView::clearTransitionState(const QString& workshopName)
+{
+    m_transitioningWorkshops.remove(workshopName);
+    if (m_transitioningWorkshops.isEmpty()) {
+        m_animationTimer->stop();
+        m_pollTimer->stop();
+    }
+}
+
+void WorkshopToolView::clearAllTransitionState()
+{
+    m_transitioningWorkshops.clear();
+    m_animationTimer->stop();
+    m_pollTimer->stop();
+}
+
 void WorkshopToolView::refresh()
 {
     if (m_refreshing)
@@ -181,6 +197,8 @@ void WorkshopToolView::refresh()
 void WorkshopToolView::onProjectChanged(int index)
 {
     if (index < 0 || m_projectCombo->count() == 0) {
+        clearAllTransitionState();
+        m_lastProjectPath.clear();
         clearLayout();
         m_workshopsLayout->insertWidget(0, new QLabel(QStringLiteral("No open projects."), m_workshopsContainer));
         m_refreshing = false;
@@ -188,6 +206,10 @@ void WorkshopToolView::onProjectChanged(int index)
     }
 
     QString projectPath = m_projectCombo->itemData(index).toString();
+    if (m_lastProjectPath != projectPath) {
+        clearAllTransitionState();
+        m_lastProjectPath = projectPath;
+    }
 
     // Only display the connecting loader if there is currently no list rendered (avoids flickering on updates)
     bool listWasEmpty = m_workshopWidgets.isEmpty();
@@ -530,6 +552,7 @@ void WorkshopToolView::removeWorkshop(const QString& workshopName)
     WorkshopApi::queryAsync(
         QStringLiteral("/v1/projects"), this, [this, projectPath, workshopName](const QJsonDocument& doc) {
             if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
+                clearTransitionState(workshopName);
                 return;
             }
 
@@ -546,7 +569,7 @@ void WorkshopToolView::removeWorkshop(const QString& workshopName)
             }
 
             if (projectId.isEmpty()) {
-                m_transitioningWorkshops.remove(workshopName);
+                clearTransitionState(workshopName);
                 m_output->setText(QStringLiteral("Failed to fully remove workshop %1: %2")
                                       .arg(workshopName, QStringLiteral("Project is not registered in workshopd.")));
                 refresh();
@@ -562,6 +585,7 @@ void WorkshopToolView::removeWorkshop(const QString& workshopName)
                 [this, projectPath, workshopName](const QJsonDocument& resp) {
                     if (!ProjectSelectionGuard::selectionMatches(projectPath,
                                                                  m_projectCombo->currentData().toString())) {
+                        clearTransitionState(workshopName);
                         return;
                     }
 
@@ -593,7 +617,7 @@ void WorkshopToolView::removeWorkshop(const QString& workshopName)
                     }
 
                     if (!success) {
-                        m_transitioningWorkshops.remove(workshopName);
+                        clearTransitionState(workshopName);
                         m_output->setText(
                             QStringLiteral("Failed to fully remove workshop %1: %2").arg(workshopName, errorMessage));
                         refresh();
@@ -601,7 +625,7 @@ void WorkshopToolView::removeWorkshop(const QString& workshopName)
                     }
 
                     if (changeId.isEmpty()) {
-                        m_transitioningWorkshops.remove(workshopName);
+                        clearTransitionState(workshopName);
                         m_output->setText(QStringLiteral("Workshop %1 removed successfully.").arg(workshopName));
                         refresh();
                         return;
@@ -612,6 +636,7 @@ void WorkshopToolView::removeWorkshop(const QString& workshopName)
                         [this, projectPath, workshopName](const QJsonDocument& waitResp) {
                             if (!ProjectSelectionGuard::selectionMatches(projectPath,
                                                                          m_projectCombo->currentData().toString())) {
+                                clearTransitionState(workshopName);
                                 return;
                             }
 
@@ -629,7 +654,7 @@ void WorkshopToolView::removeWorkshop(const QString& workshopName)
                                 errorMessage = QStringLiteral("Timed out waiting for container removal.");
                             }
 
-                            m_transitioningWorkshops.remove(workshopName);
+                            clearTransitionState(workshopName);
                             if (waitSuccess) {
                                 m_output->setText(
                                     QStringLiteral("Workshop %1 removed successfully.").arg(workshopName));
@@ -682,6 +707,7 @@ void WorkshopToolView::performAction(const QString& workshopName, const QString&
     WorkshopApi::queryAsync(
         QStringLiteral("/v1/projects"), this, [this, projectPath, workshopName, action](const QJsonDocument& doc) {
             if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())) {
+                clearTransitionState(workshopName);
                 return;
             }
 
@@ -698,7 +724,7 @@ void WorkshopToolView::performAction(const QString& workshopName, const QString&
             }
 
             if (projectId.isEmpty()) {
-                m_transitioningWorkshops.remove(workshopName);
+                clearTransitionState(workshopName);
                 m_output->setText(
                     QStringLiteral("Failed to perform action %1 on workshop %2: %3")
                         .arg(action, workshopName, QStringLiteral("Project is not registered in workshopd.")));
@@ -716,6 +742,7 @@ void WorkshopToolView::performAction(const QString& workshopName, const QString&
                 [this, projectPath, workshopName, action](const QJsonDocument& resp) {
                     if (!ProjectSelectionGuard::selectionMatches(projectPath,
                                                                  m_projectCombo->currentData().toString())) {
+                        clearTransitionState(workshopName);
                         return;
                     }
 
@@ -742,7 +769,7 @@ void WorkshopToolView::performAction(const QString& workshopName, const QString&
                     }
 
                     if (!success) {
-                        m_transitioningWorkshops.remove(workshopName);
+                        clearTransitionState(workshopName);
                         m_output->setText(QStringLiteral("Failed to perform action %1 on workshop %2: %3")
                                               .arg(action, workshopName, errorMessage));
                         refresh();
@@ -750,7 +777,7 @@ void WorkshopToolView::performAction(const QString& workshopName, const QString&
                     }
 
                     if (changeId.isEmpty()) {
-                        m_transitioningWorkshops.remove(workshopName);
+                        clearTransitionState(workshopName);
                         m_output->setText(QStringLiteral("Action %1 performed successfully on workshop %2.")
                                               .arg(action, workshopName));
                         refresh();
@@ -762,6 +789,7 @@ void WorkshopToolView::performAction(const QString& workshopName, const QString&
                         [this, projectPath, workshopName, action](const QJsonDocument& waitResp) {
                             if (!ProjectSelectionGuard::selectionMatches(projectPath,
                                                                          m_projectCombo->currentData().toString())) {
+                                clearTransitionState(workshopName);
                                 return;
                             }
 
@@ -783,7 +811,7 @@ void WorkshopToolView::performAction(const QString& workshopName, const QString&
                                     QStringLiteral("Timed out or lost connection while waiting for daemon change.");
                             }
 
-                            m_transitioningWorkshops.remove(workshopName);
+                            clearTransitionState(workshopName);
                             if (waitSuccess) {
                                 m_output->setText(QStringLiteral("Action %1 performed successfully on workshop %2.")
                                                       .arg(action, workshopName));

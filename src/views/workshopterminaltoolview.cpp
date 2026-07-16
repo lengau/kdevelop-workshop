@@ -404,6 +404,7 @@ void WorkshopTerminalToolView::startWorkshop()
         QStringLiteral("/v1/projects"), this, [this, projectPath, workshopName, action](const QJsonDocument& doc) {
             if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())
                 || m_workshopCombo->currentText() != workshopName) {
+                updateWorkshopState();
                 return;
             }
 
@@ -438,6 +439,7 @@ void WorkshopTerminalToolView::startWorkshop()
                 [this, projectPath, workshopName](const QJsonDocument& resp) {
                     if (!ProjectSelectionGuard::selectionMatches(projectPath, m_projectCombo->currentData().toString())
                         || m_workshopCombo->currentText() != workshopName) {
+                        updateWorkshopState();
                         return;
                     }
 
@@ -483,6 +485,7 @@ void WorkshopTerminalToolView::startWorkshop()
                             if (!ProjectSelectionGuard::selectionMatches(projectPath,
                                                                          m_projectCombo->currentData().toString())
                                 || m_workshopCombo->currentText() != workshopName) {
+                                updateWorkshopState();
                                 return;
                             }
 
