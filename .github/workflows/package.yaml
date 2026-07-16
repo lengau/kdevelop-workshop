@@ -60,10 +60,10 @@ jobs:
         run: |
           apt-get install -y --no-install-recommends ../kdevelop-workshop_*.deb
 
-      - name: Copy packages for upload
+      - name: Link packages for upload
         run: |
           mkdir -p dist
-          cp ../kdevelop-workshop_*.deb dist/
+          ln ../kdevelop-workshop_*.deb dist/
 
       - name: Upload Debian package
         uses: actions/upload-artifact@v4
