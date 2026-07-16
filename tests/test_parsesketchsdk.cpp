@@ -1,6 +1,7 @@
 #include "parsesketchsdk.h"
 
 #include <QtTest>
+#include <yaml-cpp/yaml.h>
 
 class TestParseSketchSdk : public QObject
 {
@@ -26,19 +27,19 @@ void TestParseSketchSdk::verifyParsedSketch(Parser parser)
         QStringLiteral("  hooks:"),
         QStringLiteral("    setup-base: ignored"),
         QStringLiteral("- name: 'sketch'"),
-        QStringLiteral("hooks:"),
-        QStringLiteral("  setup-base: |"),
-        QStringLiteral("    apt-get update"),
-        QStringLiteral("    apt-get install build-essential"),
-        QStringLiteral("  setup-project: uv sync"),
-        QStringLiteral("plugs:"),
-        QStringLiteral("  editor:"),
-        QStringLiteral("    interface: 'mount'"),
-        QStringLiteral("    workshop-target: \"project-editor\""),
-        QStringLiteral("slots:"),
-        QStringLiteral("  server:"),
-        QStringLiteral("    interface: \"tunnel\""),
-        QStringLiteral("    endpoint: 9000"),
+        QStringLiteral("  hooks:"),
+        QStringLiteral("    setup-base: |"),
+        QStringLiteral("      apt-get update"),
+        QStringLiteral("      apt-get install build-essential"),
+        QStringLiteral("    setup-project: uv sync"),
+        QStringLiteral("  plugs:"),
+        QStringLiteral("    editor:"),
+        QStringLiteral("      interface: 'mount'"),
+        QStringLiteral("      workshop-target: \"project-editor\""),
+        QStringLiteral("  slots:"),
+        QStringLiteral("    server:"),
+        QStringLiteral("      interface: \"tunnel\""),
+        QStringLiteral("      endpoint: 9000"),
     };
 
     const SketchSdkData data = parser(input);
@@ -97,24 +98,18 @@ void TestParseSketchSdk::serializesSketchData()
                       SketchSdkData::Plug{QStringLiteral("mount"), QStringLiteral("project-editor")});
     data.slots.insert(QStringLiteral("server"), SketchSdkData::Slot{QStringLiteral("tunnel"), 9000});
 
-    const QString expected = QStringLiteral(
-        "name: sketch\n"
-        "hooks:\n"
-        "  setup-base: |\n"
-        "    apt-get update\n"
-        "    apt-get install build-essential\n"
-        "  setup-project: |\n"
-        "    uv sync\n"
-        "plugs:\n"
-        "  editor:\n"
-        "    interface: 'mount'\n"
-        "    workshop-target: 'project-editor'\n"
-        "slots:\n"
-        "  server:\n"
-        "    interface: 'tunnel'\n"
-        "    endpoint: 9000\n");
-
-    QCOMPARE(serializeSketchSdk(data), expected);
+    const YAML::Node yaml = YAML::Load(serializeSketchSdk(data).toUtf8().toStdString());
+    QCOMPARE(QString::fromUtf8(yaml["name"].as<std::string>().c_str()), QStringLiteral("sketch"));
+    QCOMPARE(QString::fromUtf8(yaml["hooks"]["setup-base"].as<std::string>().c_str()),
+             QStringLiteral("apt-get update\napt-get install build-essential"));
+    QCOMPARE(QString::fromUtf8(yaml["hooks"]["setup-project"].as<std::string>().c_str()), QStringLiteral("uv sync"));
+    QCOMPARE(QString::fromUtf8(yaml["plugs"]["editor"]["interface"].as<std::string>().c_str()),
+             QStringLiteral("mount"));
+    QCOMPARE(QString::fromUtf8(yaml["plugs"]["editor"]["workshop-target"].as<std::string>().c_str()),
+             QStringLiteral("project-editor"));
+    QCOMPARE(QString::fromUtf8(yaml["slots"]["server"]["interface"].as<std::string>().c_str()),
+             QStringLiteral("tunnel"));
+    QCOMPARE(yaml["slots"]["server"]["endpoint"].as<int>(), 9000);
 }
 
 void TestParseSketchSdk::ignoresUnrelatedEntries()

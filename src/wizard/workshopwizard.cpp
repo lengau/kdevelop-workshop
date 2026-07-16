@@ -1,5 +1,6 @@
 #include "workshopwizard.h"
 #include "api/workshopapi.h"
+#include "debug.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -20,6 +21,40 @@
 #include <QJsonArray>
 #include <QKeyEvent>
 #include <QMessageBox>
+#include <yaml-cpp/yaml.h>
+
+namespace {
+std::string toYamlString(const QString& value)
+{
+    return value.toUtf8().toStdString();
+}
+
+QString fromYamlString(const std::string& value)
+{
+    return QString::fromUtf8(value.data(), static_cast<int>(value.size()));
+}
+
+QString serializeWorkshopConfiguration(const QString& name, const QString& base, const QStringList& sdks)
+{
+    YAML::Node root;
+    root["name"] = toYamlString(name);
+    root["base"] = toYamlString(base);
+
+    if (!sdks.isEmpty()) {
+        YAML::Node sdksNode(YAML::NodeType::Sequence);
+        for (const QString& sdk : sdks) {
+            YAML::Node sdkNode;
+            sdkNode["name"] = toYamlString(sdk);
+            sdksNode.push_back(sdkNode);
+        }
+        root["sdks"] = sdksNode;
+    }
+
+    YAML::Emitter emitter;
+    emitter << root;
+    return QString::fromUtf8(emitter.c_str(), static_cast<int>(emitter.size()));
+}
+}
 
 // WorkshopWizard implementation
 WorkshopWizard::WorkshopWizard(const QString& projectPath, const QString& existingName, QWidget* parent)
@@ -45,24 +80,39 @@ void WorkshopWizard::parseExistingYaml()
     QDir dir(m_projectPath);
     QFile file(dir.filePath(QStringLiteral(".workshop/%1.yaml").arg(m_existingName)));
     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QTextStream in(&file);
-        bool inSdks = false;
-        while (!in.atEnd()) {
-            QString line = in.readLine().trimmed();
-            if (line.isEmpty())
-                continue;
+        m_existingBase.clear();
+        m_existingSdks.clear();
 
-            if (line.startsWith(QLatin1String("name:"))) {
-                // Handled implicitly by m_existingName
-            } else if (line.startsWith(QLatin1String("base:"))) {
-                m_existingBase = line.mid(5).trimmed();
-            } else if (line.startsWith(QLatin1String("sdks:"))) {
-                inSdks = true;
-            } else if (inSdks && line.startsWith(QLatin1String("- name:"))) {
-                m_existingSdks << line.mid(7).trimmed();
-            } else if (inSdks && !line.startsWith(QLatin1String("-"))) {
-                inSdks = false;
+        try {
+            const QByteArray yamlBytes = file.readAll();
+            if (yamlBytes.isEmpty()) {
+                return;
             }
+            const YAML::Node doc = YAML::Load(yamlBytes.toStdString());
+            if (!doc || !doc.IsMap()) {
+                return;
+            }
+
+            const YAML::Node base = doc["base"];
+            if (base && base.IsScalar()) {
+                m_existingBase = fromYamlString(base.as<std::string>()).trimmed();
+            }
+
+            const YAML::Node sdks = doc["sdks"];
+            if (sdks && sdks.IsSequence()) {
+                for (const auto& item : sdks) {
+                    if (item.IsScalar()) {
+                        m_existingSdks << fromYamlString(item.as<std::string>()).trimmed();
+                    } else if (item.IsMap()) {
+                        const YAML::Node name = item["name"];
+                        if (name && name.IsScalar()) {
+                            m_existingSdks << fromYamlString(name.as<std::string>()).trimmed();
+                        }
+                    }
+                }
+            }
+        } catch (const YAML::Exception& e) {
+            qCWarning(PLUGIN_KDEVELOP_WORKSHOP) << "Failed to parse workshop YAML:" << e.what();
         }
     }
 }
@@ -309,18 +359,7 @@ void ReviewPage::initializePage()
     QString name = m_wizard->workshopName();
     QString base = m_wizard->baseImage();
     QStringList sdks = m_wizard->selectedSdks();
-
-    QString yaml;
-    yaml += QStringLiteral("name: %1\n").arg(name);
-    yaml += QStringLiteral("base: %1\n").arg(base);
-    if (!sdks.isEmpty()) {
-        yaml += QStringLiteral("sdks:\n");
-        for (const QString& sdk : sdks) {
-            yaml += QStringLiteral("  - name: %1\n").arg(sdk);
-        }
-    }
-
-    m_previewEdit->setText(yaml);
+    m_previewEdit->setText(serializeWorkshopConfiguration(name, base, sdks));
 }
 
 bool ReviewPage::validatePage()
