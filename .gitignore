@@ -2,6 +2,7 @@ build/
 install/
 .kdev4/
 obj-*/
+.cache/
 debian/.debhelper/
 debian/kdevelop-workshop/
 debian/*.substvars
