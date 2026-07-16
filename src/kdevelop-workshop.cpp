@@ -1,8 +1,8 @@
 #include "kdevelop-workshop.h"
-#include "workshopruntime.h"
-#include "workshopconfigpage.h"
-#include "workshoptoolview.h"
-#include "workshopterminaltoolview.h"
+#include "runtime/workshopruntime.h"
+#include "config/workshopconfigpage.h"
+#include "views/workshoptoolview.h"
+#include "views/workshopterminaltoolview.h"
 #include <sublime/view.h>
 #include <sublime/document.h>
 
@@ -21,7 +21,7 @@
 #include <QJsonArray>
 #include <QThread>
 #include <QDir>
-#include "workshopapi.h"
+#include "api/workshopapi.h"
 
 class WorkshopToolViewFactory : public KDevelop::IToolViewFactory
 {

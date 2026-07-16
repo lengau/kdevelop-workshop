@@ -1,5 +1,5 @@
 #include "workshopwizard.h"
-#include "workshopapi.h"
+#include "api/workshopapi.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
