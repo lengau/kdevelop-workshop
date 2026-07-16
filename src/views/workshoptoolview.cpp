@@ -214,9 +214,6 @@ void WorkshopToolView::onProjectChanged(int index)
 
             if (projectId.isEmpty()) {
                 m_projectId = projectId;
-                if (loadingLabel) {
-                    delete loadingLabel;
-                }
                 m_refreshing = false;
                 if (doc.isEmpty()) {
                     clearLayout();
@@ -248,9 +245,6 @@ void WorkshopToolView::onProjectChanged(int index)
 
                     // Return to GUI thread to populate the layout
                     m_projectId = projectId;
-                    if (loadingLabel) {
-                        delete loadingLabel;
-                    }
                     m_refreshing = false;
 
                     if (!success) {
