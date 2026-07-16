@@ -199,6 +199,10 @@ void WorkshopToolView::onProjectChanged(int index)
 
     WorkshopApi::queryAsync(
         QStringLiteral("/v1/projects"), this, [this, projectPath, loadingLabel](const QJsonDocument& doc) {
+            if (m_projectCombo->currentData().toString() != projectPath) {
+                return;
+            }
+
             QJsonArray projects;
             QString projectId;
             if (!doc.isEmpty()) {
@@ -232,7 +236,11 @@ void WorkshopToolView::onProjectChanged(int index)
 
             WorkshopApi::queryAsync(
                 QStringLiteral("/v1/projects/%1/workshops").arg(projectId), this,
-                [this, projectId, loadingLabel](const QJsonDocument& workshopsDoc) {
+                [this, projectPath, projectId, loadingLabel](const QJsonDocument& workshopsDoc) {
+                    if (m_projectCombo->currentData().toString() != projectPath) {
+                        return;
+                    }
+
                     QJsonArray workshops;
                     QJsonArray files;
                     bool success = false;

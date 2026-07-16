@@ -143,6 +143,10 @@ void WorkshopTerminalToolView::onProjectChanged(int index)
     QString projectPath = m_projectCombo->itemData(index).toString();
 
     WorkshopApi::queryAsync(QStringLiteral("/v1/projects"), this, [this, projectPath](const QJsonDocument& doc) {
+        if (m_projectCombo->currentData().toString() != projectPath) {
+            return;
+        }
+
         QString projectId;
         if (!doc.isEmpty()) {
             QJsonArray projects = doc.object().value(QStringLiteral("result")).toArray();
@@ -165,7 +169,11 @@ void WorkshopTerminalToolView::onProjectChanged(int index)
         }
 
         WorkshopApi::queryAsync(QStringLiteral("/v1/projects/%1/workshops").arg(projectId), this,
-                                [this](const QJsonDocument& workshopsDoc) {
+                                [this, projectPath](const QJsonDocument& workshopsDoc) {
+                                    if (m_projectCombo->currentData().toString() != projectPath) {
+                                        return;
+                                    }
+
                                     QJsonArray workshops;
                                     if (!workshopsDoc.isEmpty()) {
                                         QJsonObject result =
