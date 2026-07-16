@@ -4,6 +4,7 @@
 #include "wizard/workshopwizard.h"
 #include "sketchsdk/sketchsdkpanel.h"
 #include "sketchsdk/parsesketchsdk.h"
+#include "views/workshopcontextmenu.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -432,68 +433,56 @@ void WorkshopToolView::showContextMenu(const QString& workshopName, const QPoint
         return;
 
     auto* menu = new QMenu(this);
+    populateWorkshopContextMenu(
+        menu,
+        [this, workshopName]() {
+            QString projectPath = m_projectCombo->currentData().toString();
+            if (projectPath.isEmpty())
+                return;
 
-    // Edit Action
-    auto* editAction =
-        menu->addAction(QIcon::fromTheme(QStringLiteral("document-edit")), QStringLiteral("Edit Workshop"));
-    connect(editAction, &QAction::triggered, this, [this, workshopName]() {
-        QString projectPath = m_projectCombo->currentData().toString();
-        if (projectPath.isEmpty())
-            return;
-
-        auto* wizard = new WorkshopWizard(projectPath, workshopName, this);
-        if (wizard->exec() == QDialog::Accepted) {
-            m_output->setText(QStringLiteral("Workshop configuration updated successfully."));
-            refresh();
-        }
-    });
-
-    // Sketch SDK Action
-    auto* sketchAction =
-        menu->addAction(QIcon::fromTheme(QStringLiteral("document-edit-sign")), QStringLiteral("Sketch SDK..."));
-    connect(sketchAction, &QAction::triggered, this, [this, workshopName]() {
-        QString projectPath = m_projectCombo->currentData().toString();
-        if (projectPath.isEmpty())
-            return;
-
-        QString status = QStringLiteral("Off");
-        if (m_workshopWidgets.contains(workshopName)) {
-            status = m_workshopWidgets[workshopName].statusLabel->text();
-        }
-
-        // Load existing sketch SDK data from the XDG data location if it exists
-        SketchSdkData sketchData;
-        QString sketchYamlPath;
-        if (!m_projectId.isEmpty()) {
-            const QString dataPath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
-            if (!dataPath.isEmpty()) {
-                sketchYamlPath = QDir(dataPath).filePath(
-                    QStringLiteral("workshop/id/%1/%2/sdk/sketch/current/sdk.yaml").arg(m_projectId, workshopName));
+            auto* wizard = new WorkshopWizard(projectPath, workshopName, this);
+            if (wizard->exec() == QDialog::Accepted) {
+                m_output->setText(QStringLiteral("Workshop configuration updated successfully."));
+                refresh();
             }
-        }
+        },
+        [this, workshopName]() {
+            QString projectPath = m_projectCombo->currentData().toString();
+            if (projectPath.isEmpty())
+                return;
 
-        if (!sketchYamlPath.isEmpty() && QFile::exists(sketchYamlPath)) {
-            QFile file(sketchYamlPath);
-            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                const QStringList lines = QString::fromUtf8(file.readAll()).split(QLatin1Char('\n'));
-                sketchData = parseSketchSdkMap(lines);
+            QString status = QStringLiteral("Off");
+            if (m_workshopWidgets.contains(workshopName)) {
+                status = m_workshopWidgets[workshopName].statusLabel->text();
             }
-        }
 
-        auto* panel = new SketchSdkPanel(workshopName, projectPath, status, sketchData, this);
-        connect(panel, &SketchSdkPanel::applied, this, &WorkshopToolView::refresh);
-        panel->exec();
-        panel->deleteLater();
-    });
+            // Load existing sketch SDK data from the XDG data location if it exists
+            SketchSdkData sketchData;
+            QString sketchYamlPath;
+            if (!m_projectId.isEmpty()) {
+                const QString dataPath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
+                if (!dataPath.isEmpty()) {
+                    sketchYamlPath = QDir(dataPath).filePath(
+                        QStringLiteral("workshop/id/%1/%2/sdk/sketch/current/sdk.yaml").arg(m_projectId, workshopName));
+                }
+            }
 
-    menu->addSeparator();
+            if (!sketchYamlPath.isEmpty() && QFile::exists(sketchYamlPath)) {
+                QFile file(sketchYamlPath);
+                if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                    const QStringList lines = QString::fromUtf8(file.readAll()).split(QLatin1Char('\n'));
+                    sketchData = parseSketchSdkMap(lines);
+                }
+            }
 
-    // Remove Action
-    auto* removeAction =
-        menu->addAction(QIcon::fromTheme(QStringLiteral("edit-delete")), QStringLiteral("Remove Workshop"));
-    connect(removeAction, &QAction::triggered, this, [this, workshopName]() {
-        removeWorkshop(workshopName);
-    });
+            auto* panel = new SketchSdkPanel(workshopName, projectPath, status, sketchData, this);
+            connect(panel, &SketchSdkPanel::applied, this, &WorkshopToolView::refresh);
+            panel->exec();
+            panel->deleteLater();
+        },
+        [this, workshopName]() {
+            removeWorkshop(workshopName);
+        });
 
     menu->exec(rowWidget->mapToGlobal(pos));
     menu->deleteLater();

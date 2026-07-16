@@ -3,6 +3,7 @@ set(kdevelop-workshop_SRCS
     api/workshopapi.cpp
     config/workshopconfigpage.cpp
     runtime/workshopruntime.cpp
+    views/workshopcontextmenu.cpp
     views/workshoptoolview.cpp
     views/workshopterminaltoolview.cpp
     wizard/workshopwizard.cpp
