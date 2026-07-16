@@ -1,7 +1,7 @@
 build/
 install/
 .kdev4/
-obj-x86_64-linux-gnu/
+obj-*/
 debian/.debhelper/
 debian/kdevelop-workshop/
 debian/*.substvars

@@ -1,4 +1,4 @@
 #!/usr/bin/make -f
 
 %:
-	dh $@ --buildsystem=cmake
+	dh $@ --with kf6 --buildsystem=kf6
