@@ -27,6 +27,7 @@
 #include <KLocalizedString>
 #include <QFile>
 #include <QDir>
+#include <QPointer>
 #include <QStandardPaths>
 #include <interfaces/icore.h>
 #include <interfaces/iprojectcontroller.h>
@@ -189,7 +190,7 @@ void WorkshopToolView::onProjectChanged(int index)
 
     // Only display the connecting loader if there is currently no list rendered (avoids flickering on updates)
     bool listWasEmpty = m_workshopWidgets.isEmpty();
-    QLabel* loadingLabel = nullptr;
+    QPointer<QLabel> loadingLabel = nullptr;
     if (listWasEmpty) {
         clearLayout();
         loadingLabel = new QLabel(QStringLiteral("Connecting to workshopd API..."), m_workshopsContainer);
@@ -234,7 +235,7 @@ void WorkshopToolView::onProjectChanged(int index)
 
             WorkshopApi::queryAsync(
                 QStringLiteral("/v1/projects/%1/workshops").arg(projectId), this,
-                [this, doc, projectId, loadingLabel](const QJsonDocument& workshopsDoc) {
+                [this, projectId, loadingLabel](const QJsonDocument& workshopsDoc) {
                     QJsonArray workshops;
                     QJsonArray files;
                     bool success = false;
@@ -252,24 +253,6 @@ void WorkshopToolView::onProjectChanged(int index)
                     }
                     m_refreshing = false;
 
-                    if (doc.isEmpty()) {
-                        clearLayout();
-                        m_workshopsLayout->insertWidget(
-                            0, new QLabel(QStringLiteral("Failed to connect to workshopd API."), m_workshopsContainer));
-                        m_animationTimer->stop();
-                        m_pollTimer->stop();
-                        return;
-                    }
-                    if (projectId.isEmpty()) {
-                        clearLayout();
-                        m_workshopsLayout->insertWidget(
-                            0,
-                            new QLabel(QStringLiteral("No workshops registered for this project."),
-                                       m_workshopsContainer));
-                        m_animationTimer->stop();
-                        m_pollTimer->stop();
-                        return;
-                    }
                     if (!success) {
                         clearLayout();
                         m_workshopsLayout->insertWidget(

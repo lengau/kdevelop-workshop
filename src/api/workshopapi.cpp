@@ -23,9 +23,8 @@ void queryAsync(const QString& path, const QByteArray& postData, const QString& 
     if (socketPath.isEmpty())
         socketPath = WorkshopSettings::defaultSocketPathValue();
 
-    auto* nam = new QNetworkAccessManager();
+    static auto* nam = new QNetworkAccessManager();
     auto* rest = new QRestAccessManager(nam, context);
-    nam->setParent(rest);
 
     QNetworkRequestFactory requestFactory(QUrl(QStringLiteral("unix+http://localhost")));
     requestFactory.setAttribute(QNetworkRequest::FullLocalServerNameAttribute, socketPath);

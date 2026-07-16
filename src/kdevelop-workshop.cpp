@@ -152,7 +152,7 @@ void kdevelop_workshop::addWorkshopsForProject(KDevelop::IProject* project)
     };
 
     std::function<void(const QString&)> fetchAndRegisterWorkshops;
-    fetchAndRegisterWorkshops = [this, projectPath, fetchAndRegisterWorkshops](const QString& projectId) {
+    fetchAndRegisterWorkshops = [this, projectPath](const QString& projectId) {
         if (projectId.isEmpty()) {
             return;
         }
