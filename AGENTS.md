@@ -50,6 +50,8 @@ A complete continuous integration workflow is configured to compile, package, an
 - **Inspect, Don't Speculate**: Never speculate about code or behavior you have not directly inspected.
 - **Existing Conventions**: Follow the project's existing conventions regarding style, logging, comments, and testing.
 - **Documentation Integrity**: Maintain documentation integrity. Preserve all existing comments and docstrings that are unrelated to your code changes, unless specified otherwise. Comments should explain complex business logic, non-obvious algorithms, or "gotchas". They should be brief, explaining "why" rather than "how", and be helpful for future maintainers.
+- **KDE HIG & Design**: Adhere strictly to the KDevelop and KDE Human Interface Guidelines (HIG) and design patterns for user interface and interaction design.
+- **Library Reuse**: Prioritize reusing existing KF6 and Qt6 libraries/components (such as standard KDE widgets, dialogs, and models) instead of writing custom equivalents.
 
 ### KDevelop Coding Style
 
