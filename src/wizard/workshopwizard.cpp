@@ -51,7 +51,7 @@ QString serializeWorkshopConfiguration(const QString& name, const QString& base,
 
     YAML::Emitter emitter;
     emitter << root;
-    return fromYamlString(emitter.c_str());
+    return QString::fromUtf8(emitter.c_str(), static_cast<int>(emitter.size()));
 }
 }
 
@@ -84,8 +84,10 @@ void WorkshopWizard::parseExistingYaml()
 
         try {
             const QByteArray yamlBytes = file.readAll();
-            const YAML::Node doc =
-                YAML::Load(std::string(yamlBytes.constData(), static_cast<size_t>(yamlBytes.size())));
+            if (yamlBytes.isEmpty()) {
+                return;
+            }
+            const YAML::Node doc = YAML::Load(yamlBytes.toStdString());
             if (!doc || !doc.IsMap()) {
                 return;
             }

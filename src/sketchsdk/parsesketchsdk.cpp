@@ -132,13 +132,8 @@ QString serializeSketchNode(const SketchSdkData& data)
     root["name"] = toYamlString(QStringLiteral("sketch"));
 
     YAML::Node hooks;
-    YAML::Node setupBase;
-    setupBase = toYamlString(data.setupBase);
-    hooks["setup-base"] = setupBase;
-
-    YAML::Node setupProject;
-    setupProject = toYamlString(data.setupProject);
-    hooks["setup-project"] = setupProject;
+    hooks["setup-base"] = toYamlString(data.setupBase);
+    hooks["setup-project"] = toYamlString(data.setupProject);
     root["hooks"] = hooks;
 
     YAML::Node plugs(YAML::NodeType::Map);
@@ -161,7 +156,7 @@ QString serializeSketchNode(const SketchSdkData& data)
 
     YAML::Emitter emitter;
     emitter << root;
-    return fromYamlString(emitter.c_str());
+    return QString::fromUtf8(emitter.c_str(), static_cast<int>(emitter.size()));
 }
 
 SketchSdkData parseYaml(const QStringList& lines, bool requireSketchName, const char* context)
