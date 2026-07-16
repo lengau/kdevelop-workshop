@@ -14,6 +14,7 @@
 #include <QPushButton>
 #include <QDir>
 #include <QFile>
+#include <QTextStream>
 #include <QThread>
 #include <QJsonDocument>
 #include <QJsonObject>

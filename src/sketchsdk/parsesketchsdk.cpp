@@ -37,7 +37,7 @@ YAML::Node selectSketchNode(const YAML::Node& root, bool requireSketchName)
 
     if (root.IsMap()) {
         const QString name = trimmedScalarValue(root["name"]);
-        if (!requireSketchName || name.isEmpty() || name == QStringLiteral("sketch")) {
+        if (!requireSketchName || name == QStringLiteral("sketch")) {
             return root;
         }
         return {};
@@ -92,8 +92,15 @@ SketchSdkData parseSketchNode(const YAML::Node& node)
             }
 
             SketchSdkData::Plug plug;
-            plug.interfaceName = trimmedScalarValue(plugNode["interface"]);
-            plug.workshopTarget = trimmedScalarValue(plugNode["workshop-target"]);
+            const YAML::Node interfaceNode = plugNode["interface"];
+            if (interfaceNode && interfaceNode.IsScalar()) {
+                plug.interfaceName = trimmedScalarValue(interfaceNode);
+            }
+
+            const YAML::Node targetNode = plugNode["workshop-target"];
+            if (targetNode && targetNode.IsScalar()) {
+                plug.workshopTarget = trimmedScalarValue(targetNode);
+            }
             data.plugs.insert(name, plug);
         }
     }
@@ -108,12 +115,19 @@ SketchSdkData parseSketchNode(const YAML::Node& node)
             }
 
             SketchSdkData::Slot slot;
-            slot.interfaceName = trimmedScalarValue(slotNode["interface"]);
-            const QString endpointString = trimmedScalarValue(slotNode["endpoint"]);
-            bool ok = false;
-            slot.endpoint = endpointString.toInt(&ok);
-            if (!ok) {
-                continue;
+            const YAML::Node interfaceNode = slotNode["interface"];
+            if (interfaceNode && interfaceNode.IsScalar()) {
+                slot.interfaceName = trimmedScalarValue(interfaceNode);
+            }
+
+            const YAML::Node endpointNode = slotNode["endpoint"];
+            if (endpointNode && endpointNode.IsScalar()) {
+                const QString endpointString = trimmedScalarValue(endpointNode);
+                bool ok = false;
+                const int endpoint = endpointString.toInt(&ok);
+                if (ok) {
+                    slot.endpoint = endpoint;
+                }
             }
 
             data.slots.insert(name, slot);
