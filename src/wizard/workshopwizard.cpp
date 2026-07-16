@@ -20,7 +20,8 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QKeyEvent>
-#include <QMessageBox>
+#include <KMessageBox>
+#include <KLocalizedString>
 #include <yaml-cpp/yaml.h>
 
 namespace {
@@ -387,8 +388,7 @@ bool ReviewPage::validatePage()
     // Write the new YAML file
     QFile file(yamlFilePath);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QMessageBox::critical(this, QStringLiteral("File Error"),
-                              QStringLiteral("Failed to open file for writing: %1").arg(yamlFilePath));
+        KMessageBox::error(this, i18n("Failed to open file for writing: %1", yamlFilePath), i18n("File Error"));
         return false;
     }
 
@@ -418,8 +418,8 @@ bool ReviewPage::validatePage()
                 QString errMsg =
                     respObj.value(QStringLiteral("result")).toObject().value(QStringLiteral("message")).toString();
 
-                QMessageBox::critical(this, QStringLiteral("Validation Error"),
-                                      QStringLiteral("The workshop configuration is invalid:\n\n%1").arg(errMsg));
+                KMessageBox::error(this, i18n("The workshop configuration is invalid:\n\n%1", errMsg),
+                                   i18n("Validation Error"));
 
                 // Rollback file changes on validation failure
                 if (!existingConfigBackup.isEmpty()) {

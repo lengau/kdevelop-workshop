@@ -17,6 +17,7 @@ include(FeatureSummary)
 find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS
     I18n
     Parts
+    WidgetsAddons
 )
 
 find_package(yaml-cpp CONFIG REQUIRED)
