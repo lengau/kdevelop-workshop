@@ -3,7 +3,7 @@ Upstream-Name: kdevelop-workshop
 Source: https://github.com/lengau/kdevelop-workshop
 
 Files: *
-Copyright: 2026 Alex M. Lowe <alex.lowe@canonical.com>
+Copyright: 2026 Alex M. Lowe <alex@lowe.dev>
 License: GPL-2.0-or-later
  This program is free software; you can redistribute it and/or
  modify it under the terms of the GNU General Public License as

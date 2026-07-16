@@ -1,7 +1,7 @@
 Source: kdevelop-workshop
 Section: devel
 Priority: optional
-Maintainer: Alex M. Lowe <alex.lowe@canonical.com>
+Maintainer: Alex M. Lowe <alex@lowe.dev>
 Build-Depends: debhelper-compat (= 13),
                cmake,
                extra-cmake-modules,
