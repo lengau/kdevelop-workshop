@@ -8,9 +8,9 @@ class QMenu;
 
 struct WorkshopContextMenuActions
 {
-    QAction* editAction;
-    QAction* sketchSdkAction;
-    QAction* removeAction;
+    QAction* editAction = nullptr;
+    QAction* sketchSdkAction = nullptr;
+    QAction* removeAction = nullptr;
 };
 
 WorkshopContextMenuActions populateWorkshopContextMenu(QMenu* menu, const std::function<void()>& onEdit,
